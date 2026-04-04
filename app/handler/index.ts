@@ -150,4 +150,26 @@ export const handlers: Record<string, CommandHandler> = {
     value = Array.isArray(value) ? value : [];
     socket.write(RespEncoder.encode(value.length));
   },
+
+  LPOP: (args, { socket, cache }) => {
+    if (args.length < 1) {
+      return socket.write(`-ERR wrong number of arguments for 'llen'\r\n`);
+    }
+    const key = args[0];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    let value = cache.get(key) ?? null;
+    let isArray = Array.isArray(value);
+    if (value && !isArray) {
+      return socket.write(
+        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      );
+    }
+    value = Array.isArray(value) ? value : [];
+    if (value.length === 0) {
+      return socket.write(RespEncoder.encode(null));
+    }
+    return socket.write(RespEncoder.encode(value.shift() || null));
+  },
 };
