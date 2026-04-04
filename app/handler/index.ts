@@ -76,33 +76,38 @@ export const handlers: Record<string, CommandHandler> = {
   },
 
   LRANGE: (args, { socket, cache }) => {
-    if (args.length < 3) {
+    if (args.length !== 3) {
       return socket.write(`-ERR wrong number of arguments for 'lrange'\r\n`);
     }
-    const key = args[0];
+    const [key, startArg, stopArg] = args;
     if (typeof key !== "string") {
       return socket.write(`-ERR invalid key\r\n`);
     }
-    let value = cache.get(key) ?? null;
-    if (!value) {
+    const value = cache.get(key);
+    if (value == null) {
       return socket.write(RespEncoder.encode([]));
     }
     if (!Array.isArray(value)) {
       return socket.write(
-        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
       );
     }
-    const leftIdx = args[1];
-    const rightIdx = args[2];
-    if (typeof leftIdx === "string" && typeof rightIdx === "string") {
-      if (!isStrictNumber(leftIdx) || !isStrictNumber(rightIdx)) {
-        return socket.write(
-          `WRONGTYPE Operation against a key holding the wrong kind of value`,
-        );
+    if (typeof startArg === "string" && typeof stopArg === "string") {
+      if (!isStrictNumber(startArg) || !isStrictNumber(stopArg)) {
+        return socket.write(`-ERR value is not an integer or out of range\r\n`);
       }
-      return socket.write(
-        RespEncoder.encode(value.slice(Number(leftIdx), Number(rightIdx) + 1)),
-      );
+      let start = parseInt(startArg, 10);
+      let stop = parseInt(stopArg, 10);
+      const len = value.length;
+      if (start < 0) start = len + start;
+      if (stop < 0) stop = len + stop;
+      start = Math.max(start, 0);
+      stop = Math.min(stop, len - 1);
+      if (start > stop || start >= len) {
+        return socket.write(RespEncoder.encode([]));
+      }
+      const result = value.slice(start, stop + 1);
+      return socket.write(RespEncoder.encode(result));
     }
   },
 };
