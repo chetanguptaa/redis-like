@@ -68,7 +68,9 @@ export const handlers: Record<string, CommandHandler> = {
       );
     }
     value = Array.isArray(value) ? value : [];
-    value.push(args[1]);
+    for (let i = 1; i < args.length; i++) {
+      value.push(args[i]);
+    }
     cache.set(key, value);
     socket.write(RespEncoder.encode(value.length));
   },
