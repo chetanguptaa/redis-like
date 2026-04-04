@@ -393,46 +393,49 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (args.length < 3) {
       return socket.write(`-ERR wrong number of arguments for 'xrange'\r\n`);
     }
-    let output: TRespData[] = [];
-    const left = args[args.length - 1];
-    for (let i = 1; i <= args.length - 2; i++) {
-      let level1: TRespData[] = [];
-      const key = args[i];
-      if (typeof key !== "string") {
-        return socket.write(`-ERR invalid key\r\n`);
-      }
-      level1.push(key);
-      const value = cache.get(key) ?? null;
-      if (!value || !(value instanceof Stream)) {
-        return socket.write(
-          `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
-        );
-      }
-      if (typeof left === "string") {
-        const entries = value.entries;
-        let [leftTS, leftSeq] = left.split("-").map(Number);
-        if (!leftSeq) leftSeq = 0;
-        const level2: TRespData[] = [];
-        for (let i = 0; i < entries.length; i++) {
-          const e = entries[i];
-          const [eTS, eSeq] = e.id.split("-").map(Number);
-          if (eTS < leftTS || (eTS === leftTS && eSeq < leftSeq)) {
-            continue;
-          }
-          const fieldArray: TRespData[] = [];
-          for (const [field, val] of Object.entries(e)) {
-            if (field === "id") continue;
-            fieldArray.push(field, val);
-          }
-          level2.push([e.id, fieldArray]);
+    let inputArgsLength = args.length - 1;
+    if (inputArgsLength % 2 === 0) {
+      let output: TRespData[] = [];
+      for (let i = 1; i <= inputArgsLength / 2; i++) {
+        const left = args[inputArgsLength / 2 + 1];
+        const level1: TRespData[] = [];
+        const key = args[i];
+        if (typeof key !== "string") {
+          return socket.write(`-ERR invalid key\r\n`);
         }
-        level1.push(level2);
-      } else {
-        return socket.write(`-ERR invalid range arguments\r\n`);
+        level1.push(key);
+        const value = cache.get(key) ?? null;
+        if (!value || !(value instanceof Stream)) {
+          return socket.write(
+            `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+          );
+        }
+        if (typeof left === "string") {
+          const entries = value.entries;
+          let [leftTS, leftSeq] = left.split("-").map(Number);
+          if (!leftSeq) leftSeq = 0;
+          const level2: TRespData[] = [];
+          for (let i = 0; i < entries.length; i++) {
+            const e = entries[i];
+            const [eTS, eSeq] = e.id.split("-").map(Number);
+            if (eTS < leftTS || (eTS === leftTS && eSeq < leftSeq)) {
+              continue;
+            }
+            const fieldArray: TRespData[] = [];
+            for (const [field, val] of Object.entries(e)) {
+              if (field === "id") continue;
+              fieldArray.push(field, val);
+            }
+            level2.push([e.id, fieldArray]);
+          }
+          level1.push(level2);
+        } else {
+          return socket.write(`-ERR invalid range arguments\r\n`);
+        }
+        output.push(level1);
       }
-      output.push(level1);
+      return socket.write(RespEncoder.encode(output));
     }
-    return socket.write(RespEncoder.encode(output));
   },
 };
 
