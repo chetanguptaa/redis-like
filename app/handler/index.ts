@@ -254,7 +254,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (!value) {
       return socket.write(RespEncoder.encode(`+none\r\n`));
     }
-    return socket.write(RespEncoder.encode(typeof value));
+    return socket.write(RespEncoder.encode(`+string\r\n`));
   },
 };
 
