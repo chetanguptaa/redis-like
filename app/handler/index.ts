@@ -252,9 +252,9 @@ export const rawHandlers: Record<string, CommandHandler> = {
     }
     let value = cache.get(key) ?? null;
     if (!value) {
-      return socket.write(RespEncoder.encode(`+none\r\n`));
+      return socket.write(`+none\r\n`);
     }
-    return socket.write(RespEncoder.encode(`+string\r\n`));
+    return socket.write(`+string\r\n`);
   },
 };
 
