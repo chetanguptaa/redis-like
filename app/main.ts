@@ -7,8 +7,10 @@ type CommandHandler = (args: any[], socket: net.Socket) => void;
 
 class RedisServer {
   private server: net.Server;
+  private map: Map<any, any>;
   constructor(private port: number = 6379) {
     this.server = net.createServer(this.handleConnection.bind(this));
+    this.map = new Map();
   }
 
   public start() {
@@ -68,13 +70,27 @@ class RedisServer {
         if (args.length < 1) {
           return this.writeError(
             socket,
-            "ERR wrong number of arguments for 'echo'",
+            "wrong number of arguments for 'echo'",
           );
         }
         socket.write(RespEncoder.encode(args[0]));
       },
       [SUPPORTED_COMMANDS.PING]: (_args, socket) => {
         socket.write("+PONG\r\n");
+      },
+      [SUPPORTED_COMMANDS.SET]: (args, socket) => {
+        if (args.length < 2) {
+          return this.writeError(socket, "wrong number of arguments for 'set'");
+        }
+        this.map.set(args[0], args[1]);
+        socket.write("+OK\r\n");
+      },
+      [SUPPORTED_COMMANDS.GET]: (args, socket) => {
+        if (args.length < 1) {
+          return this.writeError(socket, "wrong number of arguments for 'set'");
+        }
+        const value = this.map.get(args[0]);
+        socket.write(RespEncoder.encode(value));
       },
     };
     return handlers[command] || null;
