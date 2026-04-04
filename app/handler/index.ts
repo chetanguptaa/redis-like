@@ -110,4 +110,26 @@ export const handlers: Record<string, CommandHandler> = {
       return socket.write(RespEncoder.encode(result));
     }
   },
+
+  LPUSH: (args, { socket, cache }) => {
+    if (args.length < 2) {
+      return socket.write(`-ERR wrong number of arguments for 'rpush'\r\n`);
+    }
+    const key = args[0];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    let value = cache.get(key) ?? null;
+    if (value && !Array.isArray(value)) {
+      return socket.write(
+        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      );
+    }
+    value = Array.isArray(value) ? value : [];
+    for (let i = 1; i < args.length; i++) {
+      value.unshift(args[i]);
+    }
+    cache.set(key, value);
+    socket.write(RespEncoder.encode(value.length));
+  },
 };

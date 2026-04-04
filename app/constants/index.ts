@@ -5,6 +5,7 @@ export const SUPPORTED_COMMANDS = {
   GET: "GET",
   RPUSH: "RPUSH",
   LRANGE: "LRANGE",
+  LPUSH: "LPUSH",
 } as const;
 
 export type TSupportedCommand =
