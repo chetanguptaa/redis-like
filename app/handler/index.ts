@@ -285,6 +285,11 @@ export const rawHandlers: Record<string, CommandHandler> = {
           const lastSeqNum = Number(lastSeq);
           const newTimestampNum = Number(newTimestamp);
           const newSeqNum = Number(newSeq);
+          if (newTimestampNum === 0 && newSeqNum === 0) {
+            return socket.write(
+              `-ERR The ID specified in XADD must be greater than 0-0\r\n`,
+            );
+          }
           if (lastTimestampNum > newTimestampNum) {
             return socket.write(
               `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
