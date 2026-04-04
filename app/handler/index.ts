@@ -170,6 +170,28 @@ export const handlers: Record<string, CommandHandler> = {
     if (value.length === 0) {
       return socket.write(RespEncoder.encode(null));
     }
-    return socket.write(RespEncoder.encode(value.shift() || null));
+    if (args.length === 1) {
+      return socket.write(RespEncoder.encode(value.unshift()));
+    }
+    if (args.length === 2) {
+      let amount = args[1];
+      if (typeof amount === "string") {
+        if (!isStrictNumber(amount)) {
+          return socket.write(
+            `-ERR value is not an integer or out of range\r\n`,
+          );
+        }
+        amount = parseInt(amount);
+        if (amount === 0) {
+          return socket.write(RespEncoder.encode([]));
+        }
+        const output: TRespData[] = [];
+        while (amount !== 0) {
+          output.push(value.shift() || null);
+          amount--;
+        }
+        return socket.write(RespEncoder.encode(output));
+      }
+    }
   },
 };
