@@ -1,11 +1,17 @@
-export enum SUPPORTED_COMMANDS {
-  "ECHO" = "ECHO",
-  "PING" = "PING",
-  "SET" = "SET",
-  "GET" = "GET",
-}
+export const SUPPORTED_COMMANDS = {
+  ECHO: "ECHO",
+  PING: "PING",
+  SET: "SET",
+  GET: "GET",
+  RPUSH: "RPUSH",
+} as const;
 
-export enum SUPPORTED_SUB_COMMANDS {
-  "PX" = "PX",
-  "EX" = "EX",
-}
+export type TSupportedCommand =
+  (typeof SUPPORTED_COMMANDS)[keyof typeof SUPPORTED_COMMANDS];
+
+export const SET_OPTIONS = {
+  PX: "PX",
+  EX: "EX",
+} as const;
+
+export type TSetOption = keyof typeof SET_OPTIONS;

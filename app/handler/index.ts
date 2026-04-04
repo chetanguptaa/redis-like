@@ -1,6 +1,6 @@
+import { SET_OPTIONS } from "../constants";
 import RespEncoder from "../encoder/RespEncoder";
-import { SUPPORTED_SUB_COMMANDS } from "../constants";
-import type { CommandHandler } from "../types";
+import type { CommandHandler, TRespData } from "../types";
 
 export const handlers: Record<string, CommandHandler> = {
   ECHO: (args, { socket }) => {
@@ -27,9 +27,9 @@ export const handlers: Record<string, CommandHandler> = {
       if (typeof ttlRaw !== "number") {
         return socket.write(`-ERR invalid expire time\r\n`);
       }
-      if (option === SUPPORTED_SUB_COMMANDS.EX) {
+      if (option === SET_OPTIONS.EX) {
         ttl = ttlRaw * 1000;
-      } else if (option === SUPPORTED_SUB_COMMANDS.PX) {
+      } else if (option === SET_OPTIONS.PX) {
         ttl = ttlRaw;
       }
     }
@@ -50,5 +50,25 @@ export const handlers: Record<string, CommandHandler> = {
     }
     const value = cache.get(key) ?? null;
     socket.write(RespEncoder.encode(value));
+  },
+
+  RPUSH: (args, { socket, cache }) => {
+    if (args.length < 2) {
+      return socket.write(`-ERR wrong number of arguments for 'rpush'\r\n`);
+    }
+    const key = args[0];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    let value = cache.get(key) ?? null;
+    if (value && !Array.isArray(value)) {
+      return socket.write(
+        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      );
+    }
+    value = Array.isArray(value) ? value : [];
+    value.push(args[1]);
+    cache.set(key, value);
+    socket.write(RespEncoder.encode(value.length));
   },
 };
