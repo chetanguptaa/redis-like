@@ -1,6 +1,8 @@
+import type { TRespData } from "../types";
+
 export type TEntry = {
   id: string;
-  [key: string]: any;
+  [key: string]: TRespData;
 };
 
 class Stream {
