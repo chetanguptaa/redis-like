@@ -6,6 +6,7 @@ export const SUPPORTED_COMMANDS = {
   RPUSH: "RPUSH",
   LRANGE: "LRANGE",
   LPUSH: "LPUSH",
+  LLEN: "LLEN",
 } as const;
 
 export type TSupportedCommand =
