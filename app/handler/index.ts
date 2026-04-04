@@ -274,34 +274,42 @@ export const rawHandlers: Record<string, CommandHandler> = {
       value = new Stream();
     }
     if (value instanceof Stream) {
-      const id = args[1];
+      let id = args[1];
       const kVS = args.slice(2, args.length);
       if (typeof id === "string") {
         const lastEntry = value.entries[value.entries.length - 1];
         if (lastEntry) {
           const [lastTimestamp, lastSeq] = lastEntry.id.split("-");
-          const [newTimestamp, newSeq] = id.split("-");
           const lastTimestampNum = Number(lastTimestamp);
           const lastSeqNum = Number(lastSeq);
+          const [newTimestamp, newSeq] = id.split("-");
           const newTimestampNum = Number(newTimestamp);
-          const newSeqNum = Number(newSeq);
-          if (newTimestampNum === 0 && newSeqNum === 0) {
-            return socket.write(
-              `-ERR The ID specified in XADD must be greater than 0-0\r\n`,
-            );
+          if (newSeq !== "*") {
+            const newSeqNum = Number(newSeq);
+            if (newTimestampNum === 0 && newSeqNum === 0) {
+              return socket.write(
+                `-ERR The ID specified in XADD must be greater than 0-0\r\n`,
+              );
+            }
+            if (lastTimestampNum > newTimestampNum) {
+              return socket.write(
+                `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
+              );
+            } else if (
+              lastTimestampNum === newTimestampNum &&
+              lastSeqNum >= newSeqNum
+            ) {
+              return socket.write(
+                `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
+              );
+            }
+          } else {
+            if (lastTimestampNum === newTimestampNum) {
+              id = id.split("-")[0] + "-" + (lastSeqNum + 1).toString();
+            }
           }
-          if (lastTimestampNum > newTimestampNum) {
-            return socket.write(
-              `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
-            );
-          } else if (
-            lastTimestampNum === newTimestampNum &&
-            lastSeqNum >= newSeqNum
-          ) {
-            return socket.write(
-              `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
-            );
-          }
+        } else {
+          id = id.split("-")[0] + "-" + "0";
         }
         const obj: TEntry = { id };
         for (let i = 0; i < kVS.length; i += 2) {
