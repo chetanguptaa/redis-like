@@ -1,4 +1,5 @@
 import { SET_OPTIONS } from "../constants";
+import Stream from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
 import type { CommandHandler, TRespData } from "../types";
 import { isStrictNumber, safeHandler, wakeBlockedClients } from "../utils";
@@ -254,7 +255,47 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (!value) {
       return socket.write(`+none\r\n`);
     }
+    if (value instanceof Stream) {
+      return socket.write(`+stream\r\n`);
+    }
     return socket.write(`+string\r\n`);
+  },
+
+  XADD: (args, { socket, cache }) => {
+    if (args.length < 3) {
+      return socket.write(`-ERR wrong number of arguments for 'xadd'\r\n`);
+    }
+    const key = args[0];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    let value = cache.get(key) ?? null;
+    if (!value) {
+      value = new Stream();
+    }
+    if (value instanceof Stream) {
+      const id = args[1];
+      const kVS = args.slice(2, args.length);
+      if (typeof id === "string") {
+        const obj: {
+          id: string;
+          [key: string]: any;
+        } = {
+          id,
+        };
+        for (let i = 0; i < kVS.length; i += 2) {
+          const k = kVS[i] as string;
+          const v = kVS[i + 1] as string;
+          obj[k] = v;
+        }
+      }
+      cache.set(key, value);
+      return socket.write(RespEncoder.encode(id));
+    } else {
+      return socket.write(
+        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+      );
+    }
   },
 };
 

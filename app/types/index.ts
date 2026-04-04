@@ -1,5 +1,7 @@
 import * as net from "net";
-export type RespPrimitive = string | number | null;
+import type Stream from "../data-structures/Stream";
+
+export type RespPrimitive = string | number | Stream | null;
 export type TRespData = RespPrimitive | TRespData[];
 
 export type CommandHandler = (args: TRespData[], ctx: CommandContext) => void;
