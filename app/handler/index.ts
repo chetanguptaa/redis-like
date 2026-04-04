@@ -1,9 +1,9 @@
 import { SET_OPTIONS } from "../constants";
 import RespEncoder from "../encoder/RespEncoder";
 import type { CommandHandler, TRespData } from "../types";
-import { isStrictNumber } from "../utils";
+import { isStrictNumber, safeHandler } from "../utils";
 
-export const handlers: Record<string, CommandHandler> = {
+export const rawHandlers: Record<string, CommandHandler> = {
   ECHO: (args, { socket }) => {
     if (args.length < 1) {
       return socket.write(`-ERR wrong number of arguments for 'echo'\r\n`);
@@ -195,3 +195,10 @@ export const handlers: Record<string, CommandHandler> = {
     }
   },
 };
+
+export const handlers: Record<string, CommandHandler> = Object.fromEntries(
+  Object.entries(rawHandlers).map(([cmd, handler]) => [
+    cmd,
+    safeHandler(handler),
+  ]),
+);
