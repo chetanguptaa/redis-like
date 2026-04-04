@@ -171,7 +171,7 @@ export const handlers: Record<string, CommandHandler> = {
       return socket.write(RespEncoder.encode(null));
     }
     if (args.length === 1) {
-      return socket.write(RespEncoder.encode(value.unshift()));
+      return socket.write(RespEncoder.encode(value.shift() || null));
     }
     if (args.length === 2) {
       let amount = args[1];
