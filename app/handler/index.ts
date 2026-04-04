@@ -241,6 +241,21 @@ export const rawHandlers: Record<string, CommandHandler> = {
       }, timeout * 1000);
     }
   },
+
+  TYPE: (args, { socket, cache }) => {
+    if (args.length < 1) {
+      return socket.write(`-ERR wrong number of arguments for 'type'\r\n`);
+    }
+    const key = args[0];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    let value = cache.get(key) ?? null;
+    if (!value) {
+      return socket.write(RespEncoder.encode(`+none\r\n`));
+    }
+    return socket.write(RespEncoder.encode(typeof value));
+  },
 };
 
 export const handlers: Record<string, CommandHandler> = Object.fromEntries(
