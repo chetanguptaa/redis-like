@@ -277,6 +277,10 @@ export const rawHandlers: Record<string, CommandHandler> = {
       let id = args[1];
       const kVS = args.slice(2, args.length);
       if (typeof id === "string") {
+        if (id === "*") {
+          const timestamp = Date.now();
+          id = `${timestamp}` + "-" + "*";
+        }
         const lastEntry = value.entries[value.entries.length - 1];
         if (lastEntry) {
           const [lastTimestamp, lastSeq] = lastEntry.id.split("-");
