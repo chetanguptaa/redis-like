@@ -237,7 +237,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
       timer = setTimeout(() => {
         if (resolved) return;
         resolved = true;
-        socket.write(RespEncoder.encode([]));
+        socket.write(`*-1\r\n`);
       }, timeout * 1000);
     }
   },
