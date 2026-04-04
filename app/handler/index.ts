@@ -307,7 +307,9 @@ export const rawHandlers: Record<string, CommandHandler> = {
             if (lastTimestampNum === newTimestampNum) {
               id = id.split("-")[0] + "-" + (lastSeqNum + 1).toString();
             } else {
-              id = id.split("-")[0] + "-" + (0).toString();
+              if (id.split("-")[1] === "*") {
+                id = id.split("-")[0] + "-" + (0).toString();
+              }
             }
           }
         } else {
