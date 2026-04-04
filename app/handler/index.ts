@@ -200,7 +200,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (args.length < 2) {
       return socket.write(`-ERR wrong number of arguments for 'blpop'\r\n`);
     }
-    const timeout = parseInt(String(args[args.length - 1]), 10);
+    const timeout = parseFloat(String(args[args.length - 1]));
     const keys = args.slice(0, -1);
     if (isNaN(timeout)) {
       return socket.write(`-ERR timeout is not a number\r\n`);
