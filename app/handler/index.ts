@@ -74,4 +74,35 @@ export const handlers: Record<string, CommandHandler> = {
     cache.set(key, value);
     socket.write(RespEncoder.encode(value.length));
   },
+
+  LRANGE: (args, { socket, cache }) => {
+    if (args.length < 3) {
+      return socket.write(`-ERR wrong number of arguments for 'lrange'\r\n`);
+    }
+    const key = args[0];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    let value = cache.get(key) ?? null;
+    if (!value) {
+      return socket.write(RespEncoder.encode([]));
+    }
+    if (!Array.isArray(value)) {
+      return socket.write(
+        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      );
+    }
+    const leftIdx = args[1];
+    const rightIdx = args[2];
+    if (typeof leftIdx === "string" && typeof rightIdx === "string") {
+      if (!isStrictNumber(leftIdx) || !isStrictNumber(rightIdx)) {
+        return socket.write(
+          `WRONGTYPE Operation against a key holding the wrong kind of value`,
+        );
+      }
+      return socket.write(
+        RespEncoder.encode(value.slice(Number(leftIdx), Number(rightIdx) + 1)),
+      );
+    }
+  },
 };
