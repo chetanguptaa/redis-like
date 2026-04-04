@@ -378,7 +378,46 @@ export const rawHandlers: Record<string, CommandHandler> = {
           continue;
         }
         const fieldArray: TRespData[] = [];
-        console.log("entries ", JSON.stringify(e));
+        for (const [field, val] of Object.entries(e)) {
+          if (field === "id") continue;
+          fieldArray.push(field, val);
+        }
+        output.push([e.id, fieldArray]);
+      }
+      return socket.write(RespEncoder.encode(output));
+    }
+    return socket.write(`-ERR invalid range arguments\r\n`);
+  },
+
+  XREAD: (args, { socket, cache }) => {
+    if (args.length < 3) {
+      return socket.write(`-ERR wrong number of arguments for 'xrange'\r\n`);
+    }
+    const key = args[1];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    const value = cache.get(key) ?? null;
+    if (!value || !(value instanceof Stream)) {
+      return socket.write(
+        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+      );
+    }
+    const left = args[2];
+    if (typeof left === "string") {
+      const entries = value.entries;
+      const lastEntry = entries[entries.length - 1];
+      const lastSeq = Number(lastEntry.id.split("-")[1]);
+      let [leftTS, leftSeq] = left.split("-").map(Number);
+      if (!leftSeq) leftSeq = 0;
+      const output: TRespData[][] = [];
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i];
+        const [eTS, eSeq] = e.id.split("-").map(Number);
+        if (eTS < leftTS || (eTS === leftTS && eSeq < leftSeq)) {
+          continue;
+        }
+        const fieldArray: TRespData[] = [];
         for (const [field, val] of Object.entries(e)) {
           if (field === "id") continue;
           fieldArray.push(field, val);
