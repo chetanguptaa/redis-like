@@ -1,6 +1,7 @@
 import { SET_OPTIONS } from "../constants";
 import RespEncoder from "../encoder/RespEncoder";
 import type { CommandHandler, TRespData } from "../types";
+import { isStrictNumber } from "../utils";
 
 export const handlers: Record<string, CommandHandler> = {
   ECHO: (args, { socket }) => {
@@ -24,13 +25,13 @@ export const handlers: Record<string, CommandHandler> = {
     }
     let ttl: number | undefined;
     if (option && ttlRaw) {
-      if (typeof ttlRaw !== "number") {
+      if (typeof ttlRaw === "string" && !isStrictNumber(ttlRaw)) {
         return socket.write(`-ERR invalid expire time\r\n`);
       }
       if (option === SET_OPTIONS.EX) {
-        ttl = ttlRaw * 1000;
+        ttl = Number(ttlRaw) * 1000;
       } else if (option === SET_OPTIONS.PX) {
-        ttl = ttlRaw;
+        ttl = Number(ttlRaw);
       }
     }
     cache.set(key, value);
