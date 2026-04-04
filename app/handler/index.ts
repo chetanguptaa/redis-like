@@ -306,6 +306,8 @@ export const rawHandlers: Record<string, CommandHandler> = {
           } else {
             if (lastTimestampNum === newTimestampNum) {
               id = id.split("-")[0] + "-" + (lastSeqNum + 1).toString();
+            } else {
+              id = id.split("-")[0] + "-" + (0).toString();
             }
           }
         } else {
