@@ -309,6 +309,10 @@ export const rawHandlers: Record<string, CommandHandler> = {
             }
           }
         } else {
+          const timestamp = id.split("-")[0];
+          if (Number(timestamp) === 0) {
+            id = id.split("-")[0] + "-" + "1";
+          }
           id = id.split("-")[0] + "-" + "0";
         }
         const obj: TEntry = { id };
