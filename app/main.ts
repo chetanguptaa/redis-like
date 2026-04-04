@@ -1,11 +1,95 @@
 import * as net from "net";
+import RespParser from "./parser/RespParser";
+import RespEncoder from "./encoder/RespEncoder";
+import { SUPPORTED_COMMANDS } from "./constants";
 
-// Uncomment the code below to pass the first stage
-const server: net.Server = net.createServer((connection: net.Socket) => {
-  // Handle connection
-  connection.on("data", (data: Buffer) => {
-    connection.write(`+PONG\r\n`);
-  });
-});
+type CommandHandler = (args: any[], socket: net.Socket) => void;
 
-server.listen(6379, "127.0.0.1");
+class RedisServer {
+  private server: net.Server;
+  constructor(private port: number = 6379) {
+    this.server = net.createServer(this.handleConnection.bind(this));
+  }
+
+  public start() {
+    this.server.listen(this.port, "127.0.0.1", () => {
+      console.log(`Server listening on 127.0.0.1:${this.port}`);
+    });
+    this.server.on("error", (err) => {
+      console.error("Server error:", err);
+    });
+  }
+
+  private handleConnection(socket: net.Socket) {
+    console.log("Client connected:", socket.remoteAddress);
+    const parser = new RespParser();
+    socket.on("data", (chunk: Buffer) => {
+      try {
+        const messages = parser.push(chunk.toString());
+        for (const message of messages) {
+          this.handleMessage(message, socket);
+        }
+      } catch (err) {
+        this.handleError(err, socket);
+      }
+    });
+    socket.on("error", (err) => {
+      console.error("Socket error:", err.message);
+      socket.destroy();
+    });
+    socket.on("close", () => {
+      console.log("Client disconnected");
+    });
+  }
+
+  private handleMessage(message: any, socket: net.Socket) {
+    if (!Array.isArray(message) || message.length === 0) {
+      return this.writeError(socket, "Protocol error: expected array");
+    }
+    const [commandRaw, ...args] = message;
+    if (typeof commandRaw !== "string") {
+      return this.writeError(socket, "Invalid command");
+    }
+    const command = commandRaw.toUpperCase();
+    const handler = this.getHandler(command);
+    if (!handler) {
+      return this.writeError(socket, `ERR unknown command '${command}'`);
+    }
+    try {
+      handler(args, socket);
+    } catch (err) {
+      this.handleError(err, socket);
+    }
+  }
+
+  private getHandler(command: string): CommandHandler | null {
+    const handlers: Record<string, CommandHandler> = {
+      [SUPPORTED_COMMANDS.ECHO]: (args, socket) => {
+        if (args.length < 1) {
+          return this.writeError(
+            socket,
+            "ERR wrong number of arguments for 'echo'",
+          );
+        }
+        socket.write(RespEncoder.encode(args[0]));
+      },
+      [SUPPORTED_COMMANDS.PING]: (_args, socket) => {
+        socket.write("+PONG\r\n");
+      },
+    };
+    return handlers[command] || null;
+  }
+
+  private writeError(socket: net.Socket, message: string) {
+    socket.write(`-ERR ${message}\r\n`);
+  }
+
+  private handleError(err: unknown, socket: net.Socket) {
+    const message = err instanceof Error ? err.message : "Unknown server error";
+    console.error("Processing error:", message);
+    this.writeError(socket, message);
+  }
+}
+
+const server = new RedisServer(6379);
+server.start();
