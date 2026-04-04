@@ -8,6 +8,7 @@ export const SUPPORTED_COMMANDS = {
   LPUSH: "LPUSH",
   LLEN: "LLEN",
   LPOP: "LPOP",
+  BLPOP: "BLPOP",
 } as const;
 
 export type TSupportedCommand =

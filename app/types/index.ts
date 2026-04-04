@@ -1,9 +1,16 @@
+import * as net from "net";
 export type RespPrimitive = string | number | null;
 export type TRespData = RespPrimitive | TRespData[];
 
 export type CommandHandler = (args: TRespData[], ctx: CommandContext) => void;
 
+export type TBlocked = {
+  socket: net.Socket;
+  unblock: (key: string, element: TRespData) => void;
+};
+
 export interface CommandContext {
-  socket: import("net").Socket;
+  socket: net.Socket;
   cache: Map<string, TRespData>;
+  blocked: Map<string, Array<TBlocked>>;
 }

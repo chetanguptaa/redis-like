@@ -1,11 +1,12 @@
 import * as net from "net";
 import RespParser from "./parser/RespParser";
-import type { TRespData } from "./types";
+import type { TBlocked, TRespData } from "./types";
 import { executeCommand } from "./cmd-exectutor";
 
 class RedisServer {
   private server: net.Server;
   private cache = new Map<string, TRespData>();
+  private blocked = new Map<string, Array<TBlocked>>();
 
   constructor(private port: number = 6379) {
     this.server = net.createServer(this.handleConnection.bind(this));
@@ -29,6 +30,7 @@ class RedisServer {
           executeCommand(msg, {
             socket,
             cache: this.cache,
+            blocked: this.blocked,
           });
         }
       } catch (err) {
