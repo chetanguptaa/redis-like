@@ -1,5 +1,5 @@
 import { SET_OPTIONS } from "../constants";
-import Stream from "../data-structures/Stream";
+import Stream, { type TEntry } from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
 import type { CommandHandler, TRespData } from "../types";
 import { isStrictNumber, safeHandler, wakeBlockedClients } from "../utils";
@@ -277,17 +277,34 @@ export const rawHandlers: Record<string, CommandHandler> = {
       const id = args[1];
       const kVS = args.slice(2, args.length);
       if (typeof id === "string") {
-        const obj: {
-          id: string;
-          [key: string]: any;
-        } = {
-          id,
-        };
+        const lastEntry = value.entries[value.entries.length - 1];
+        if (lastEntry) {
+          const [lastTimestamp, lastSeq] = lastEntry.id.split("-");
+          const [newTimestamp, newSeq] = id.split("-");
+          const lastTimestampNum = Number(lastTimestamp);
+          const lastSeqNum = Number(lastSeq);
+          const newTimestampNum = Number(newTimestamp);
+          const newSeqNum = Number(newSeq);
+          if (lastTimestampNum > newTimestampNum) {
+            return socket.write(
+              `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
+            );
+          } else if (
+            lastTimestampNum === newTimestampNum &&
+            lastSeqNum >= newSeqNum
+          ) {
+            return socket.write(
+              `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
+            );
+          }
+        }
+        const obj: TEntry = { id };
         for (let i = 0; i < kVS.length; i += 2) {
           const k = kVS[i] as string;
           const v = kVS[i + 1] as string;
           obj[k] = v;
         }
+        value.entries.push(obj);
       }
       cache.set(key, value);
       return socket.write(RespEncoder.encode(id));

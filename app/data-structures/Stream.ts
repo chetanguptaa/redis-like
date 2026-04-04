@@ -1,14 +1,13 @@
-import type { TRespData } from "../types";
+export type TEntry = {
+  id: string;
+  [key: string]: any;
+};
 
 class Stream {
-  public entries: Array<TRespData>;
-  public lastTimestamp: number;
-  public lastSeq: number;
+  public entries: Array<TEntry>;
 
   constructor() {
     this.entries = [];
-    this.lastTimestamp = 0;
-    this.lastSeq = 0;
   }
 }
 
