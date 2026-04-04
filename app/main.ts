@@ -1,16 +1,18 @@
 import * as net from "net";
 import RespParser from "./parser/RespParser";
 import RespEncoder from "./encoder/RespEncoder";
-import { SUPPORTED_COMMANDS } from "./constants";
+import { SUPPORTED_COMMANDS, SUPPORTED_SUB_COMMANDS } from "./constants";
+import ExpiryMap from "./data-structures/ExpiryMap";
+import type { TRespData } from "./types";
 
 type CommandHandler = (args: any[], socket: net.Socket) => void;
 
 class RedisServer {
   private server: net.Server;
-  private map: Map<any, any>;
+  private cache = new ExpiryMap<string, TRespData>();
+
   constructor(private port: number = 6379) {
     this.server = net.createServer(this.handleConnection.bind(this));
-    this.map = new Map();
   }
 
   public start() {
@@ -82,15 +84,26 @@ class RedisServer {
         if (args.length < 2) {
           return this.writeError(socket, "wrong number of arguments for 'set'");
         }
-        this.map.set(args[0], args[1]);
+        if (args.length === 4) {
+          const timeoutVersion = args[2];
+          const time = args[3];
+          if (timeoutVersion === SUPPORTED_SUB_COMMANDS.EX) {
+            this.cache.set(args[0], args[1], time * 1000);
+          }
+          if (timeoutVersion === SUPPORTED_SUB_COMMANDS.PX) {
+            this.cache.set(args[0], args[1], time);
+          }
+        } else {
+          this.cache.set(args[0], args[1]);
+        }
         socket.write("+OK\r\n");
       },
       [SUPPORTED_COMMANDS.GET]: (args, socket) => {
         if (args.length < 1) {
           return this.writeError(socket, "wrong number of arguments for 'set'");
         }
-        const value = this.map.get(args[0]);
-        socket.write(RespEncoder.encode(value));
+        const value = this.cache.get(args[0]);
+        socket.write(RespEncoder.encode(value || null));
       },
     };
     return handlers[command] || null;

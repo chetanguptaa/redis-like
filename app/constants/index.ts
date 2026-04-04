@@ -4,3 +4,8 @@ export enum SUPPORTED_COMMANDS {
   "SET" = "SET",
   "GET" = "GET",
 }
+
+export enum SUPPORTED_SUB_COMMANDS {
+  "PX" = "PX",
+  "EX" = "EX",
+}
