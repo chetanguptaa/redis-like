@@ -84,7 +84,6 @@ export const rawHandlers: Record<string, CommandHandler> = {
     cache.set(key, value);
     socket.write(RespEncoder.encode(value.length));
     wakeBlockedListClients(key, cache, blocked);
-    return;
   },
 
   LRANGE: (args, { socket, cache }) => {
@@ -144,7 +143,6 @@ export const rawHandlers: Record<string, CommandHandler> = {
     cache.set(key, value);
     socket.write(RespEncoder.encode(value.length));
     wakeBlockedListClients(key, cache, blocked);
-    return;
   },
 
   LLEN: (args, { socket, cache }) => {
