@@ -1,7 +1,12 @@
 import { handlers } from "../handler";
 import type { CommandContext, TRespData } from "../types";
 
-export function executeCommand(message: TRespData, ctx: CommandContext) {
+export function executeCommand(
+  message: TRespData,
+  ctx: CommandContext,
+  isMulti: boolean,
+  cmdQueue: (() => void)[],
+) {
   if (!Array.isArray(message) || message.length === 0) {
     return ctx.socket.write(`-ERR protocol error\r\n`);
   }
@@ -14,5 +19,10 @@ export function executeCommand(message: TRespData, ctx: CommandContext) {
   if (!handler) {
     return ctx.socket.write(`-ERR unknown command '${command}'\r\n`);
   }
-  handler(args, ctx);
+  if (isMulti) {
+    cmdQueue.push(() => handler(args, ctx));
+    return ctx.socket.write("+QUEUED\r\n");
+  } else {
+    handler(args, ctx);
+  }
 }

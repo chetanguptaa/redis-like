@@ -548,6 +548,14 @@ export const rawHandlers: Record<string, CommandHandler> = {
     cache.set(key, newVal.toString());
     return socket.write(RespEncoder.encode(newVal));
   },
+
+  MULTI: (args, { socket, setIsMulti }) => {
+    if (args.length > 0) {
+      return socket.write(`-ERR wrong number of arguments for 'incr'\r\n`);
+    }
+    setIsMulti(true);
+    return socket.write("+OK\r\n");
+  },
 };
 
 export const handlers: Record<string, CommandHandler> = Object.fromEntries(

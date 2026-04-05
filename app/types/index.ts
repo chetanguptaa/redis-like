@@ -15,4 +15,6 @@ export interface CommandContext {
   socket: net.Socket;
   cache: Map<string, TRespData>;
   blocked: Map<string, Array<TBlocked>>;
+  isMulti: boolean;
+  setIsMulti: (value: boolean) => void;
 }
