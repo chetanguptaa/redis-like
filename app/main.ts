@@ -4,6 +4,7 @@ import RespParser from "./parser/RespParser";
 import type { TBlocked, TCMDQueueElem, TRespData } from "./types";
 import { executeCommand } from "./cmd-exectutor";
 import RespEncoder from "./encoder/RespEncoder";
+import RespDecoder from "./decoder/RespDecoder";
 
 const { values } = parseArgs({
   options: {
@@ -31,7 +32,21 @@ class RedisServer {
       const toMasterConnection = net.connect(Number(masterPort), masterHost);
       toMasterConnection.write(RespEncoder.encode(["PING"]));
       toMasterConnection.on("data", (chunk) => {
-        console.log("chunk is this ", chunk.toString());
+        const response = RespDecoder.decode(chunk.toString());
+        if (
+          typeof response === "object" &&
+          response !== null &&
+          "__simple" in response
+        ) {
+          if (response.value === "PONG") {
+            toMasterConnection.write(
+              RespEncoder.encode(["REPLCONF", "listening-port", port]),
+            );
+            toMasterConnection.write(
+              RespEncoder.encode(["REPLCONF", "capa", "psync2"]),
+            );
+          }
+        }
       });
     } else {
       this.replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";

@@ -623,6 +623,10 @@ export const rawHandlers: Record<string, CommandHandler> = {
     }
     throw new Error("unsupported INFO section");
   },
+
+  REPLCONF: () => {
+    return simpleString("OK");
+  },
 };
 
 export const handlers: Record<string, CommandHandler> = Object.fromEntries(
