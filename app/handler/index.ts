@@ -530,6 +530,32 @@ export const rawHandlers: Record<string, CommandHandler> = {
       }, timeout);
     }
   },
+
+  INCR: (args, { socket, cache }) => {
+    if (args.length < 1) {
+      return socket.write(`-ERR wrong number of arguments for 'incr'\r\n`);
+    }
+    const key = args[0];
+    if (typeof key !== "string") {
+      return socket.write(`-ERR invalid key\r\n`);
+    }
+    const val = cache.get(key);
+    if (val && typeof val !== "number") {
+      return socket.write(
+        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+      );
+    }
+    let newVal = null;
+    if (!val) {
+      newVal = 1;
+    } else {
+      if (typeof val === "number") {
+        newVal = val + 1;
+      }
+    }
+    cache.set(key, newVal);
+    return socket.write(RespEncoder.encode(newVal));
+  },
 };
 
 export const handlers: Record<string, CommandHandler> = Object.fromEntries(
