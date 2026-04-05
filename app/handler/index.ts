@@ -40,7 +40,11 @@ export const rawHandlers: Record<string, CommandHandler> = {
         ttl = Number(ttlRaw);
       }
     }
-    cache.set(key, value);
+    if (typeof value === "string" && isStrictNumber(value)) {
+      cache.set(key, Number(value));
+    } else {
+      cache.set(key, value);
+    }
     if (ttl) {
       setTimeout(() => cache.delete(key), ttl);
     }
