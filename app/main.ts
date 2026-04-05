@@ -50,6 +50,12 @@ class RedisServer {
               RespEncoder.encode(["REPLCONF", "capa", "psync2"]),
             );
           }
+          if (response.value === "OK") {
+            toMasterConnection.write(RespEncoder.encode(["PSYNC", "?", "-1"]));
+          }
+          if (response.value.includes("FULLRESYNC")) {
+            console.log("response is what ", JSON.stringify(response));
+          }
         }
       });
     } else {

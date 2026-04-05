@@ -627,6 +627,12 @@ export const rawHandlers: Record<string, CommandHandler> = {
   REPLCONF: () => {
     return simpleString("OK");
   },
+
+  PSYNC: (_args, { replicationId, replicaOf }) => {
+    if (replicaOf) {
+      return simpleString("FULLRESYNC " + replicationId + " " + 0);
+    }
+  },
 };
 
 export const handlers: Record<string, CommandHandler> = Object.fromEntries(
