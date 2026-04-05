@@ -629,9 +629,10 @@ export const rawHandlers: Record<string, CommandHandler> = {
   },
 
   PSYNC: (_args, { replicationId, replicaOf }) => {
-    if (replicaOf) {
+    if (!replicaOf) {
       return simpleString("FULLRESYNC " + replicationId + " " + 0);
     }
+    throw new Error("unsupported PSYNC section for slave");
   },
 };
 

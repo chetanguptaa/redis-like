@@ -31,6 +31,7 @@ class RedisServer {
       const [masterHost, masterPort] = replicaOf.split(" ");
       const toMasterConnection = net.connect(Number(masterPort), masterHost);
       toMasterConnection.write(RespEncoder.encode(["PING"]));
+      let stage: "PING" | "REPLCONF1" | "REPLCONF2" | "PSYNC" = "PING";
       toMasterConnection.on("data", (chunk) => {
         const response = RespDecoder.decode(chunk.toString());
         if (
@@ -38,7 +39,9 @@ class RedisServer {
           response !== null &&
           "__simple" in response
         ) {
-          if (response.value === "PONG") {
+          const value = response.value;
+          if (value === "PONG" && stage === "PING") {
+            stage = "REPLCONF1";
             toMasterConnection.write(
               RespEncoder.encode([
                 "REPLCONF",
@@ -49,12 +52,11 @@ class RedisServer {
             toMasterConnection.write(
               RespEncoder.encode(["REPLCONF", "capa", "psync2"]),
             );
-          }
-          if (response.value === "OK") {
+          } else if (value === "OK" && stage === "REPLCONF1") {
+            stage = "REPLCONF2";
+          } else if (value === "OK" && stage === "REPLCONF2") {
+            stage = "PSYNC";
             toMasterConnection.write(RespEncoder.encode(["PSYNC", "?", "-1"]));
-          }
-          if (response.value.includes("FULLRESYNC")) {
-            console.log("response is what ", JSON.stringify(response));
           }
         }
       });
