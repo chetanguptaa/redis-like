@@ -598,8 +598,11 @@ export const rawHandlers: Record<string, CommandHandler> = {
     return simpleString("OK");
   },
 
-  INFO: (args) => {
+  INFO: (args, { replicaOf }) => {
     if (args.length === 0) {
+      if (replicaOf) {
+        return "# Replication\r\nrole:slave\r\n";
+      }
       return "# Replication\r\nrole:master\r\n";
     }
     if (
@@ -607,6 +610,9 @@ export const rawHandlers: Record<string, CommandHandler> = {
       typeof args[0] === "string" &&
       args[0].toUpperCase() === "REPLICATION"
     ) {
+      if (replicaOf) {
+        return "# Replication\r\n" + "role:slave\r\n";
+      }
       return "# Replication\r\n" + "role:master\r\n";
     }
     throw new Error("unsupported INFO section");

@@ -7,6 +7,7 @@ import { executeCommand } from "./cmd-exectutor";
 const { values } = parseArgs({
   options: {
     port: { type: "string" },
+    replicaof: { type: "string" },
   },
 });
 
@@ -14,9 +15,14 @@ class RedisServer {
   private server: net.Server;
   private cache = new Map<string, TRespData>();
   private blocked = new Map<string, Array<TBlocked>>();
+  private replicaOf: string | null = null;
 
-  constructor(private port: number = 6379) {
+  constructor(
+    private port: number = 6379,
+    replicaOf: string | null = null,
+  ) {
     this.server = net.createServer(this.handleConnection.bind(this));
+    this.replicaOf = replicaOf;
   }
 
   start() {
@@ -44,6 +50,7 @@ class RedisServer {
             isMulti = value;
           },
           cmdQueue,
+          replicaOf: this.replicaOf,
         });
       }
     });
@@ -54,4 +61,4 @@ class RedisServer {
   }
 }
 
-new RedisServer(Number(values.port) || 6379).start();
+new RedisServer(Number(values.port) || 6379, values.replicaof).start();

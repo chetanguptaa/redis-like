@@ -34,4 +34,5 @@ export interface CommandContext {
   isMulti: boolean;
   setIsMulti: (value: boolean) => void;
   cmdQueue: TCMDQueueElem[];
+  replicaOf: string | null;
 }
