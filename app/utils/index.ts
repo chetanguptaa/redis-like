@@ -1,4 +1,9 @@
-import type { CommandHandler, TBlocked, TRespData } from "../types";
+import type {
+  CommandHandler,
+  TBlocked,
+  TRespData,
+  TSimpleString,
+} from "../types";
 
 export function isStrictNumber(str: string) {
   if (typeof str !== "string" || str.trim() === "") return false;
@@ -8,10 +13,9 @@ export function isStrictNumber(str: string) {
 export const safeHandler = (handler: CommandHandler): CommandHandler => {
   return async (args, ctx) => {
     try {
-      await handler(args, ctx);
+      return await handler(args, ctx);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "unknown error";
-      ctx.socket.write(`-ERR ${message}\r\n`);
+      throw err;
     }
   };
 };
@@ -28,7 +32,7 @@ export const wakeBlockedListClients = (
   while (queue.length > 0 && list.length > 0) {
     const client = queue.shift();
     const element = list.shift();
-    client?.unblock(key, element || null);
+    client?.unblock(key, element ?? null);
   }
   if (queue.length === 0) {
     blocked.delete(key);
@@ -45,3 +49,8 @@ export const wakeBlockedStreamsClients = (
     client?.unblock();
   }
 };
+
+export const simpleString = (value: string): TSimpleString => ({
+  __simple: true,
+  value,
+});

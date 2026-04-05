@@ -1,38 +1,40 @@
 import { SET_OPTIONS } from "../constants";
 import Stream, { type TEntry } from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
+import RedisError from "../error";
 import type { CommandHandler, TRespData } from "../types";
 import {
   isStrictNumber,
   safeHandler,
+  simpleString,
   wakeBlockedListClients,
   wakeBlockedStreamsClients,
 } from "../utils";
 
 export const rawHandlers: Record<string, CommandHandler> = {
-  ECHO: (args, { socket }) => {
+  ECHO: (args) => {
     if (args.length < 1) {
-      return socket.write(`-ERR wrong number of arguments for 'echo'\r\n`);
+      throw new Error("wrong number of arguments for 'echo'");
     }
-    return socket.write(RespEncoder.encode(args[0]));
+    return args[0];
   },
 
-  PING: (_args, { socket }) => {
-    return socket.write("+PONG\r\n");
+  PING: (_args) => {
+    return simpleString("PONG");
   },
 
-  SET: (args, { socket, cache }) => {
+  SET: (args, { cache }) => {
     if (args.length < 2) {
-      return socket.write(`-ERR wrong number of arguments for 'set'\r\n`);
+      throw new Error("wrong number of arguments for 'set'");
     }
     const [key, value, option, ttlRaw] = args;
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     let ttl: number | undefined;
     if (option && ttlRaw) {
       if (typeof ttlRaw === "string" && !isStrictNumber(ttlRaw)) {
-        return socket.write(`-ERR invalid expire time\r\n`);
+        throw new Error("invalid expire time");
       }
       if (option === SET_OPTIONS.EX) {
         ttl = Number(ttlRaw) * 1000;
@@ -44,33 +46,33 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (ttl) {
       setTimeout(() => cache.delete(key), ttl);
     }
-    return socket.write("+OK\r\n");
+    return simpleString("OK");
   },
 
-  GET: (args, { socket, cache }) => {
+  GET: (args, { cache }) => {
     if (args.length < 1) {
-      return socket.write(`-ERR wrong number of arguments for 'get'\r\n`);
+      throw new Error("wrong number of arguments for 'get'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
-    const value = cache.get(key) ?? null;
-    return socket.write(RespEncoder.encode(value));
+    return cache.get(key) ?? null;
   },
 
-  RPUSH: (args, { socket, cache, blocked }) => {
+  RPUSH: (args, { cache, blocked }) => {
     if (args.length < 2) {
-      return socket.write(`-ERR wrong number of arguments for 'rpush'\r\n`);
+      throw new Error("wrong number of arguments for 'rpush'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     let value = cache.get(key) ?? null;
     if (value && !Array.isArray(value)) {
-      return socket.write(
-        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      throw new RedisError(
+        "WRONGTYPE",
+        "Operation against a key holding the wrong kind of value",
       );
     }
     value = Array.isArray(value) ? value : [];
@@ -78,30 +80,32 @@ export const rawHandlers: Record<string, CommandHandler> = {
       value.push(args[i]);
     }
     cache.set(key, value);
-    socket.write(RespEncoder.encode(value.length));
+    const output = value.length;
     wakeBlockedListClients(key, cache, blocked);
+    return output;
   },
 
-  LRANGE: (args, { socket, cache }) => {
+  LRANGE: (args, { cache }) => {
     if (args.length !== 3) {
-      return socket.write(`-ERR wrong number of arguments for 'lrange'\r\n`);
+      throw new Error("wrong number of arguments for 'lrange'");
     }
     const [key, startArg, stopArg] = args;
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     const value = cache.get(key);
     if (value == null) {
-      return socket.write(RespEncoder.encode([]));
+      return [];
     }
     if (!Array.isArray(value)) {
-      return socket.write(
-        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+      throw new RedisError(
+        "WRONGTYPE",
+        "Operation against a key holding the wrong kind of value",
       );
     }
     if (typeof startArg === "string" && typeof stopArg === "string") {
       if (!isStrictNumber(startArg) || !isStrictNumber(stopArg)) {
-        return socket.write(`-ERR value is not an integer or out of range\r\n`);
+        throw new Error("value is not an integer or out of range");
       }
       let start = parseInt(startArg, 10);
       let stop = parseInt(stopArg, 10);
@@ -111,25 +115,26 @@ export const rawHandlers: Record<string, CommandHandler> = {
       start = Math.max(start, 0);
       stop = Math.min(stop, len - 1);
       if (start > stop || start >= len) {
-        return socket.write(RespEncoder.encode([]));
+        return [];
       }
       const result = value.slice(start, stop + 1);
-      return socket.write(RespEncoder.encode(result));
+      return result;
     }
   },
 
-  LPUSH: (args, { socket, cache, blocked }) => {
+  LPUSH: (args, { cache, blocked }) => {
     if (args.length < 2) {
-      return socket.write(`-ERR wrong number of arguments for 'lpush'\r\n`);
+      throw new Error("wrong number of arguments for 'lpush'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     let value = cache.get(key) ?? null;
     if (value && !Array.isArray(value)) {
-      return socket.write(
-        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      throw new RedisError(
+        "WRONGTYPE",
+        "Operation against a key holding the wrong kind of value",
       );
     }
     value = Array.isArray(value) ? value : [];
@@ -137,102 +142,106 @@ export const rawHandlers: Record<string, CommandHandler> = {
       value.unshift(args[i]);
     }
     cache.set(key, value);
-    socket.write(RespEncoder.encode(value.length));
+    const output = value.length;
     wakeBlockedListClients(key, cache, blocked);
+    return output;
   },
 
-  LLEN: (args, { socket, cache }) => {
+  LLEN: (args, { cache }) => {
     if (args.length < 1) {
-      return socket.write(`-ERR wrong number of arguments for 'llen'\r\n`);
+      throw new Error("wrong number of arguments for 'llen'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     let value = cache.get(key) ?? null;
     if (value && !Array.isArray(value)) {
-      return socket.write(
-        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      throw new RedisError(
+        "WRONGTYPE",
+        "Operation against a key holding the wrong kind of value",
       );
     }
     value = Array.isArray(value) ? value : [];
-    socket.write(RespEncoder.encode(value.length));
-    return;
+    return value.length;
   },
 
-  LPOP: (args, { socket, cache }) => {
+  LPOP: (args, { cache }) => {
     if (args.length < 1) {
-      return socket.write(`-ERR wrong number of arguments for 'llen'\r\n`);
+      throw new Error("wrong number of arguments for 'llop'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     let value = cache.get(key) ?? null;
     if (value && !Array.isArray(value)) {
-      return socket.write(
-        `WRONGTYPE Operation against a key holding the wrong kind of value`,
+      throw new RedisError(
+        "WRONGTYPE",
+        "Operation against a key holding the wrong kind of value",
       );
     }
     value = Array.isArray(value) ? value : [];
     if (value.length === 0) {
-      return socket.write(RespEncoder.encode(null));
+      return null;
     }
     if (args.length === 1) {
-      return socket.write(RespEncoder.encode(value.shift() || null));
+      return value.shift() || null;
     }
     if (args.length === 2) {
       let amount = args[1];
       if (typeof amount === "string") {
         if (!isStrictNumber(amount)) {
-          return socket.write(
-            `-ERR value is not an integer or out of range\r\n`,
-          );
+          throw new Error("value is not an integer or out of range");
         }
         amount = parseInt(amount);
         if (amount === 0) {
-          return socket.write(RespEncoder.encode([]));
+          return [];
         }
         const output: TRespData[] = [];
         while (amount !== 0) {
           output.push(value.shift() || null);
           amount--;
         }
-        return socket.write(RespEncoder.encode(output));
+        return output;
       }
     }
   },
 
   BLPOP: (args, { socket, cache, blocked }) => {
     if (args.length < 2) {
-      return socket.write(`-ERR wrong number of arguments for 'blpop'\r\n`);
+      throw new Error("wrong number of arguments for 'blpop'");
     }
     const timeout = parseFloat(String(args[args.length - 1]));
     const keys = args.slice(0, -1);
     if (isNaN(timeout)) {
-      return socket.write(`-ERR timeout is not a number\r\n`);
+      throw new Error("timeout is not a number");
     }
     for (const key of keys) {
       if (typeof key === "string") {
         let value = cache.get(key) ?? null;
         if (value && !Array.isArray(value)) {
-          return socket.write(
-            `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+          throw new RedisError(
+            "WRONGTYPE",
+            "Operation against a key holding the wrong kind of value",
           );
         }
         if (Array.isArray(value) && value.length > 0) {
           const element = value.shift();
-          return socket.write(RespEncoder.encode([key, element || null]));
+          return [key, element ?? null];
         }
       }
     }
     let resolved = false;
+    let timer: NodeJS.Timeout | null = null;
     const unblock = (key?: string, element?: TRespData) => {
       if (resolved) return;
       resolved = true;
       if (timer) clearTimeout(timer);
-      if (key && element) {
+      if (key !== undefined && element !== undefined) {
         socket.write(RespEncoder.encode([key, element]));
+      } else {
+        socket.write("*-1\r\n");
       }
     };
     for (const key of keys) {
@@ -241,41 +250,39 @@ export const rawHandlers: Record<string, CommandHandler> = {
         blocked.get(key)?.push({ socket, unblock });
       }
     }
-    let timer: NodeJS.Timeout | null = null;
     if (timeout > 0) {
       timer = setTimeout(() => {
-        if (resolved) return;
-        resolved = true;
-        socket.write(`*-1\r\n`);
+        unblock();
       }, timeout * 1000);
     }
+    return;
   },
 
-  TYPE: (args, { socket, cache }) => {
+  TYPE: (args, { cache }) => {
     if (args.length < 1) {
-      return socket.write(`-ERR wrong number of arguments for 'type'\r\n`);
+      throw new Error("wrong number of arguments for 'type'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     let value = cache.get(key) ?? null;
     if (!value) {
-      return socket.write(`+none\r\n`);
+      return simpleString("none");
     }
     if (value instanceof Stream) {
-      return socket.write(`+stream\r\n`);
+      return simpleString("stream");
     }
-    return socket.write(`+string\r\n`);
+    return simpleString("string");
   },
 
-  XADD: (args, { socket, cache, blocked }) => {
+  XADD: (args, { cache, blocked }) => {
     if (args.length < 3) {
-      return socket.write(`-ERR wrong number of arguments for 'xadd'\r\n`);
+      throw new Error("wrong number of arguments for 'xadd'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     let value = cache.get(key) ?? null;
     if (!value) {
@@ -299,20 +306,20 @@ export const rawHandlers: Record<string, CommandHandler> = {
           if (newSeq !== "*") {
             const newSeqNum = Number(newSeq);
             if (newTimestampNum === 0 && newSeqNum === 0) {
-              return socket.write(
-                `-ERR The ID specified in XADD must be greater than 0-0\r\n`,
+              throw new Error(
+                "The ID specified in XADD must be greater than 0-0",
               );
             }
             if (lastTimestampNum > newTimestampNum) {
-              return socket.write(
-                `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
+              throw new Error(
+                "The ID specified in XADD is equal or smaller than the target stream top item",
               );
             } else if (
               lastTimestampNum === newTimestampNum &&
               lastSeqNum >= newSeqNum
             ) {
-              return socket.write(
-                `-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n`,
+              throw new Error(
+                "The ID specified in XADD is equal or smaller than the target stream top item",
               );
             }
           } else {
@@ -343,28 +350,29 @@ export const rawHandlers: Record<string, CommandHandler> = {
         value.entries.push(obj);
       }
       cache.set(key, value);
-      socket.write(RespEncoder.encode(id));
       wakeBlockedStreamsClients(key, blocked);
-      return;
+      return id;
     } else {
-      return socket.write(
-        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+      throw new RedisError(
+        "WRONGTYPE",
+        "Operation against a key holding the wrong kind of value",
       );
     }
   },
 
   XRANGE: (args, { socket, cache }) => {
     if (args.length < 3) {
-      return socket.write(`-ERR wrong number of arguments for 'xrange'\r\n`);
+      throw new Error("wrong number of arguments for 'xrange'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     const value = cache.get(key) ?? null;
     if (!value || !(value instanceof Stream)) {
-      return socket.write(
-        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
+      throw new RedisError(
+        "WRONGTYPE",
+        "Operation against a key holding the wrong kind of value",
       );
     }
     const left = args[1];
@@ -394,31 +402,31 @@ export const rawHandlers: Record<string, CommandHandler> = {
         }
         output.push([e.id, fieldArray]);
       }
-      return socket.write(RespEncoder.encode(output));
+      return output;
     }
-    return socket.write(`-ERR invalid range arguments\r\n`);
+    throw new Error("invalid range arguments");
   },
 
   XREAD: (args, { socket, cache, blocked }) => {
     if (args.length < 3) {
-      return socket.write(`-ERR wrong number of arguments for 'xread'\r\n`);
+      throw new Error("wrong number of arguments for 'xread'");
     }
     let i = 0;
     let timeout: number | null = null;
     if (String(args[i])?.toUpperCase() === "BLOCK") {
       timeout = parseFloat(String(args[i + 1]));
       if (isNaN(timeout)) {
-        return socket.write(`-ERR timeout is not a number\r\n`);
+        throw new Error("timeout is not a number");
       }
       i += 2;
     }
     if (String(args[i])?.toUpperCase() !== "STREAMS") {
-      return socket.write(`-ERR syntax error\r\n`);
+      throw new Error("syntax error");
     }
     i++;
     const remaining = args.length - i;
     if (remaining % 2 !== 0) {
-      return socket.write(`-ERR syntax error\r\n`);
+      throw new Error("syntax error");
     }
     const half = remaining / 2;
     const keys = args.slice(i, i + half);
@@ -448,7 +456,10 @@ export const rawHandlers: Record<string, CommandHandler> = {
         }
         const value = cache.get(key);
         if (value && !(value instanceof Stream)) {
-          return "WRONGTYPE";
+          throw new RedisError(
+            "WRONGTYPE",
+            "Operation against a key holding the wrong kind of value",
+          );
         }
         if (!value || !(value instanceof Stream)) continue;
         let ts: number, seq: number;
@@ -483,16 +494,13 @@ export const rawHandlers: Record<string, CommandHandler> = {
       return result;
     };
     const immediate = readStreams();
-    if (immediate === "WRONGTYPE") {
-      return socket.write(
-        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
-      );
-    }
     if (immediate && immediate.length > 0) {
-      return socket.write(RespEncoder.encode(immediate));
+      return immediate;
     }
     if (timeout === null) {
-      return socket.write(`*-1\r\n`);
+      return {
+        type: "null-array",
+      };
     }
     let resolved = false;
     const unblock = () => {
@@ -511,7 +519,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
           }
         }
         if (timer) clearTimeout(timer);
-        return socket.write(RespEncoder.encode(res));
+        socket.write(RespEncoder.encode(res));
       }
     };
     for (const key of keys) {
@@ -524,37 +532,57 @@ export const rawHandlers: Record<string, CommandHandler> = {
       timer = setTimeout(() => {
         if (resolved) return;
         resolved = true;
-        socket.write(`*-1\r\n`);
+        socket.write("*-1\r\n");
       }, timeout);
     }
   },
 
-  INCR: (args, { socket, cache }) => {
+  INCR: (args, { cache }) => {
     if (args.length < 1) {
-      return socket.write(`-ERR wrong number of arguments for 'incr'\r\n`);
+      throw new Error("wrong number of arguments for 'incr'");
     }
     const key = args[0];
     if (typeof key !== "string") {
-      return socket.write(`-ERR invalid key\r\n`);
+      throw new Error("invalid key");
     }
     const val = cache.get(key);
     if (val && typeof val === "string" && !isStrictNumber(val)) {
-      return socket.write(`-ERR value is not an integer or out of range\r\n`);
+      throw new Error("value is not an integer or out of range");
     }
     let newVal = 1;
     if (val) {
       newVal = Number(val) + 1;
     }
     cache.set(key, newVal.toString());
-    return socket.write(RespEncoder.encode(newVal));
+    return newVal;
   },
 
-  MULTI: (args, { socket, setIsMulti }) => {
+  MULTI: (args, { setIsMulti }) => {
     if (args.length > 0) {
-      return socket.write(`-ERR wrong number of arguments for 'incr'\r\n`);
+      throw new Error("wrong number of arguments for 'multi'");
     }
     setIsMulti(true);
-    return socket.write("+OK\r\n");
+    return simpleString("OK");
+  },
+
+  EXEC: async (args, ctx) => {
+    if (args.length > 0) {
+      throw new Error("wrong number of arguments for 'exec'");
+    }
+    if (!ctx.isMulti) {
+      throw new Error("EXEC without MULTI");
+    }
+    ctx.setIsMulti(true);
+    const output: TRespData[] = [];
+    while (ctx.cmdQueue.length) {
+      const cmd = ctx.cmdQueue.shift();
+      if (cmd) {
+        const result = await cmd.handler(cmd.args, ctx);
+        if (result === undefined) continue;
+        output.push(result);
+      }
+    }
+    return output;
   },
 };
 

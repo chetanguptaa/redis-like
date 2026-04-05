@@ -1,9 +1,28 @@
-import type { TRespData } from "../types";
+import type { TRespData, TSimpleString } from "../types";
 
 class RespEncoder {
   static encode(data: TRespData): string {
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "type" in data &&
+      data.type === "null-array"
+    ) {
+      return "*-1\r\n";
+    }
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "type" in data &&
+      data.type === "null-bulk"
+    ) {
+      return "$-1\r\n";
+    }
     if (data === null) {
       return "$-1\r\n";
+    }
+    if (typeof data === "object" && data !== null && "__simple" in data) {
+      return `+${(data as TSimpleString).value}\r\n`;
     }
     if (typeof data === "string") {
       return `$${data.length}\r\n${data}\r\n`;

@@ -1,12 +1,9 @@
+import RespEncoder from "../encoder/RespEncoder";
+import RedisError from "../error";
 import { handlers } from "../handler";
 import type { CommandContext, TRespData } from "../types";
 
-export function executeCommand(
-  message: TRespData,
-  ctx: CommandContext,
-  isMulti: boolean,
-  cmdQueue: (() => void)[],
-) {
+export async function executeCommand(message: TRespData, ctx: CommandContext) {
   if (!Array.isArray(message) || message.length === 0) {
     return ctx.socket.write(`-ERR protocol error\r\n`);
   }
@@ -19,10 +16,20 @@ export function executeCommand(
   if (!handler) {
     return ctx.socket.write(`-ERR unknown command '${command}'\r\n`);
   }
-  if (isMulti) {
-    cmdQueue.push(() => handler(args, ctx));
+  if (ctx.isMulti && commandRaw.toUpperCase() !== "EXEC") {
+    ctx.cmdQueue.push({ handler, args });
     return ctx.socket.write("+QUEUED\r\n");
-  } else {
-    handler(args, ctx);
+  }
+  try {
+    const result = await handler(args, ctx);
+    if (result === undefined) return;
+    ctx.socket.write(RespEncoder.encode(result as TRespData));
+  } catch (err: any) {
+    const message = err instanceof Error ? err.message : "unknown error";
+    if (err instanceof RedisError) {
+      ctx.socket.write(`-${err.code} ${err.message}\r\n`);
+    } else {
+      ctx.socket.write(`-ERR ${message}\r\n`);
+    }
   }
 }

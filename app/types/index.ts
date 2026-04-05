@@ -1,15 +1,28 @@
 import * as net from "net";
 import type Stream from "../data-structures/Stream";
 
-export type RespPrimitive = string | number | Stream | null;
+export type RespPrimitive =
+  | string
+  | number
+  | Stream
+  | TSimpleString
+  | TRespNull
+  | null;
+
 export type TRespData = RespPrimitive | TRespData[];
 
+export type TRespNull = { type: "null-array" } | { type: "null-bulk" };
+
 export type CommandHandler = (args: TRespData[], ctx: CommandContext) => void;
+
+export type TSimpleString = { __simple: true; value: string };
 
 export type TBlocked = {
   socket: net.Socket;
   unblock: (key?: string, element?: TRespData) => void;
 };
+
+export type TCMDQueueElem = { handler: Function; args: TRespData[] };
 
 export interface CommandContext {
   socket: net.Socket;
@@ -17,4 +30,5 @@ export interface CommandContext {
   blocked: Map<string, Array<TBlocked>>;
   isMulti: boolean;
   setIsMulti: (value: boolean) => void;
+  cmdQueue: TCMDQueueElem[];
 }
