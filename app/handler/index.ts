@@ -635,7 +635,6 @@ export const rawHandlers: Record<string, CommandHandler> = {
       const emptyRdb = readFileSync("empty.rdb");
       socket.write(`$${emptyRdb.length}\r\n`);
       socket.write(emptyRdb);
-      socket.write(`\r\n`);
       return;
     }
     throw new Error("unsupported PSYNC section for slave");
