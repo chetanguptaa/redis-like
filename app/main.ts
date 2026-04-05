@@ -3,6 +3,7 @@ import { parseArgs } from "node:util";
 import RespParser from "./parser/RespParser";
 import type { TBlocked, TCMDQueueElem, TRespData } from "./types";
 import { executeCommand } from "./cmd-exectutor";
+import RespEncoder from "./encoder/RespEncoder";
 
 const { values } = parseArgs({
   options: {
@@ -26,6 +27,9 @@ class RedisServer {
     this.server = net.createServer(this.handleConnection.bind(this));
     if (replicaOf) {
       this.replicaOf = replicaOf;
+      const [masterHost, masterPort] = replicaOf.split(" ");
+      const toMasterConnection = net.connect(Number(masterPort), masterHost);
+      toMasterConnection.write(RespEncoder.encode(["PING"]));
     } else {
       this.replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
       this.replicationOffset = 0;
