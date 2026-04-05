@@ -598,22 +598,28 @@ export const rawHandlers: Record<string, CommandHandler> = {
     return simpleString("OK");
   },
 
-  INFO: (args, { replicaOf }) => {
+  INFO: (args, { replicaOf, replicationId, replicationOffset }) => {
     if (args.length === 0) {
-      if (replicaOf) {
-        return "# Replication\r\nrole:slave\r\n";
+      let output = `# Replication\r\nrole:${replicaOf ? "slave" : "master"}\r\n`;
+      if (!replicaOf) {
+        output = output.concat(
+          `master_replid:${replicationId}\r\nmaster_repl_offset:${replicationOffset}\r\n`,
+        );
       }
-      return "# Replication\r\nrole:master\r\n";
+      return output;
     }
     if (
       args.length === 1 &&
       typeof args[0] === "string" &&
       args[0].toUpperCase() === "REPLICATION"
     ) {
-      if (replicaOf) {
-        return "# Replication\r\n" + "role:slave\r\n";
+      let output = `# Replication\r\nrole:${replicaOf ? "slave" : "master"}\r\n`;
+      if (!replicaOf) {
+        output = output.concat(
+          `master_replid:${replicationId}\r\nmaster_repl_offset:${replicationOffset}\r\n`,
+        );
       }
-      return "# Replication\r\n" + "role:master\r\n";
+      return output;
     }
     throw new Error("unsupported INFO section");
   },

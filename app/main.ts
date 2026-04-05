@@ -16,13 +16,20 @@ class RedisServer {
   private cache = new Map<string, TRespData>();
   private blocked = new Map<string, Array<TBlocked>>();
   private replicaOf: string | null = null;
+  private replicationId: string | null = null;
+  private replicationOffset: number | null = null;
 
   constructor(
     private port: number = 6379,
     replicaOf: string | null = null,
   ) {
     this.server = net.createServer(this.handleConnection.bind(this));
-    this.replicaOf = replicaOf;
+    if (replicaOf) {
+      this.replicaOf = replicaOf;
+    } else {
+      this.replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
+      this.replicationOffset = 0;
+    }
   }
 
   start() {
@@ -51,6 +58,8 @@ class RedisServer {
           },
           cmdQueue,
           replicaOf: this.replicaOf,
+          replicationId: this.replicationId,
+          replicationOffset: this.replicationOffset,
         });
       }
     });
