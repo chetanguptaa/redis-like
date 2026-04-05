@@ -8,7 +8,7 @@ export type CommandHandler = (args: TRespData[], ctx: CommandContext) => void;
 
 export type TBlocked = {
   socket: net.Socket;
-  unblock: (key: string, element: TRespData) => void;
+  unblock: (key?: string, element?: TRespData) => void;
 };
 
 export interface CommandContext {

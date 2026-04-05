@@ -16,7 +16,7 @@ export const safeHandler = (handler: CommandHandler): CommandHandler => {
   };
 };
 
-export const wakeBlockedClients = (
+export const wakeBlockedListClients = (
   key: string,
   cache: Map<string, TRespData>,
   blocked: Map<string, Array<TBlocked>>,
@@ -32,5 +32,16 @@ export const wakeBlockedClients = (
   }
   if (queue.length === 0) {
     blocked.delete(key);
+  }
+};
+
+export const wakeBlockedStreamsClients = (
+  key: string,
+  blocked: Map<string, Array<TBlocked>>,
+) => {
+  const clients = blocked.get(key);
+  if (!clients || clients.length === 0) return;
+  for (const client of clients) {
+    client?.unblock();
   }
 };
