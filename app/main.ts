@@ -26,22 +26,18 @@ class RedisServer {
     const cmdQueue: TCMDQueueElem[] = [];
     const parser = new RespParser();
     socket.on("data", (chunk) => {
-      try {
-        const messages = parser.push(chunk.toString());
-        for (const msg of messages) {
-          executeCommand(msg, {
-            socket,
-            cache: this.cache,
-            blocked: this.blocked,
-            isMulti,
-            setIsMulti: (value: boolean) => {
-              isMulti = value;
-            },
-            cmdQueue,
-          });
-        }
-      } catch (err) {
-        this.handleError(err, socket);
+      const messages = parser.push(chunk.toString());
+      for (const msg of messages) {
+        executeCommand(msg, {
+          socket,
+          cache: this.cache,
+          blocked: this.blocked,
+          isMulti,
+          setIsMulti: (value: boolean) => {
+            isMulti = value;
+          },
+          cmdQueue,
+        });
       }
     });
     socket.on("error", (err) => {

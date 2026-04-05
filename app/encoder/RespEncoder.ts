@@ -1,3 +1,4 @@
+import RedisError from "../error";
 import type { TRespData, TSimpleString } from "../types";
 
 class RespEncoder {
@@ -17,6 +18,12 @@ class RespEncoder {
       data.type === "null-bulk"
     ) {
       return "$-1\r\n";
+    }
+    if (data instanceof RedisError) {
+      return `-${data.code} ${data.message}\r\n`;
+    }
+    if (data instanceof Error) {
+      return `-ERR ${data.message}\r\n`;
     }
     if (data === null) {
       return "$-1\r\n";

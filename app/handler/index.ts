@@ -574,12 +574,13 @@ export const rawHandlers: Record<string, CommandHandler> = {
     }
     ctx.setIsMulti(false);
     const output: TRespData[] = [];
-    while (ctx.cmdQueue.length) {
-      const cmd = ctx.cmdQueue.shift();
-      if (cmd) {
-        const result = await cmd.handler(cmd.args, ctx);
-        if (result === undefined) continue;
-        output.push(result);
+    for (const { handler, args } of ctx.cmdQueue) {
+      try {
+        const res = await handler(args, ctx);
+        output.push(res ?? null);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "unknown error";
+        output.push(new RedisError("ERR", message));
       }
     }
     return output;

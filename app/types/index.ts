@@ -1,5 +1,6 @@
 import * as net from "net";
 import type Stream from "../data-structures/Stream";
+import type RedisError from "../error";
 
 export type RespPrimitive =
   | string
@@ -7,6 +8,8 @@ export type RespPrimitive =
   | Stream
   | TSimpleString
   | TRespNull
+  | Error
+  | RedisError
   | null;
 
 export type TRespData = RespPrimitive | TRespData[];
