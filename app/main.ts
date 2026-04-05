@@ -40,7 +40,11 @@ class RedisServer {
         ) {
           if (response.value === "PONG") {
             toMasterConnection.write(
-              RespEncoder.encode(["REPLCONF", "listening-port", port]),
+              RespEncoder.encode([
+                "REPLCONF",
+                "listening-port",
+                port.toString(),
+              ]),
             );
             toMasterConnection.write(
               RespEncoder.encode(["REPLCONF", "capa", "psync2"]),
