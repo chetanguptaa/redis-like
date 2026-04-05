@@ -425,11 +425,26 @@ export const rawHandlers: Record<string, CommandHandler> = {
     const half = remaining / 2;
     const keys = args.slice(i, i + half);
     const ids = args.slice(i + half);
+    const resolvedIds = ids.map((id, idx) => {
+      if (id !== "$") return id;
+      const key = keys[idx];
+      if (typeof key === "string") {
+        const value = cache.get(key);
+        if (
+          !value ||
+          !(value instanceof Stream) ||
+          value.entries.length === 0
+        ) {
+          return "0-0";
+        }
+        return value.entries[value.entries.length - 1].id;
+      }
+    });
     const readStreams = () => {
       const result: TRespData[] = [];
       for (let k = 0; k < keys.length; k++) {
         const key = keys[k];
-        const id = ids[k];
+        const id = resolvedIds[k];
         if (typeof key !== "string" || typeof id !== "string") {
           return null;
         }
