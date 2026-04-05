@@ -1,7 +1,14 @@
 import * as net from "net";
+import { parseArgs } from "node:util";
 import RespParser from "./parser/RespParser";
 import type { TBlocked, TCMDQueueElem, TRespData } from "./types";
 import { executeCommand } from "./cmd-exectutor";
+
+const { values } = parseArgs({
+  options: {
+    port: { type: "string" },
+  },
+});
 
 class RedisServer {
   private server: net.Server;
@@ -45,12 +52,10 @@ class RedisServer {
       socket.destroy();
     });
   }
-
-  private handleError(err: unknown, socket: net.Socket) {
-    const message = err instanceof Error ? err.message : "Unknown server error";
-    console.error("Error:", message);
-    socket.write(`-ERR ${message}\r\n`);
-  }
 }
 
-new RedisServer().start();
+const main = () => {
+  new RedisServer(Number(values.port) || 6379).start();
+};
+
+main();
