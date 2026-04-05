@@ -597,6 +597,25 @@ export const rawHandlers: Record<string, CommandHandler> = {
     cmdQueue = [];
     return simpleString("OK");
   },
+
+  INFO: (args) => {
+    const argsLength = args.length;
+    if (argsLength < 1) {
+      throw new Error("wrong number of arguments for 'exec'");
+    }
+    if (argsLength === 2) {
+      let output = "";
+      const secondArgs = args[1];
+      if (typeof secondArgs !== "string") {
+        throw new Error("invalid argument");
+      }
+      switch (secondArgs.toUpperCase()) {
+        case "REPLICATION": {
+          return "role:master";
+        }
+      }
+    }
+  },
 };
 
 export const handlers: Record<string, CommandHandler> = Object.fromEntries(

@@ -54,8 +54,4 @@ class RedisServer {
   }
 }
 
-const main = () => {
-  new RedisServer(Number(values.port) || 6379).start();
-};
-
-main();
+new RedisServer(Number(values.port) || 6379).start();
