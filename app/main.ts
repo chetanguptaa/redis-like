@@ -23,10 +23,9 @@ class RedisServer {
     });
   }
 
-  private setIsMulti(value: boolean) {
-    console.log("value is this ", value);
+  private setIsMulti = (value: boolean) => {
     this.isMulti = value;
-  }
+  };
 
   private handleConnection(socket: net.Socket) {
     const parser = new RespParser();
