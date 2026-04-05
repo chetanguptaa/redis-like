@@ -438,10 +438,19 @@ export const rawHandlers: Record<string, CommandHandler> = {
           return "WRONGTYPE";
         }
         if (!value || !(value instanceof Stream)) continue;
-        let [ts, seq] =
-          id === "$"
-            ? [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
-            : id.split("-").map(Number);
+        let ts: number, seq: number;
+        if (id === "$") {
+          if (!value.entries.length) {
+            ts = 0;
+            seq = 0;
+          } else {
+            const lastId = value.entries[value.entries.length - 1].id;
+            [ts, seq] = lastId.split("-").map(Number);
+          }
+        } else {
+          [ts, seq] = id.split("-").map(Number);
+          if (!seq) seq = 0;
+        }
         if (!seq) seq = 0;
         const entriesOut: TRespData[] = [];
         for (const e of value.entries) {
