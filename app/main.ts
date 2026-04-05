@@ -30,6 +30,9 @@ class RedisServer {
       const [masterHost, masterPort] = replicaOf.split(" ");
       const toMasterConnection = net.connect(Number(masterPort), masterHost);
       toMasterConnection.write(RespEncoder.encode(["PING"]));
+      toMasterConnection.on("data", (chunk) => {
+        console.log("chunk is this ", chunk.toString());
+      });
     } else {
       this.replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
       this.replicationOffset = 0;
