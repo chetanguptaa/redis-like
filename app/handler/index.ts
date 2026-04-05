@@ -40,11 +40,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
         ttl = Number(ttlRaw);
       }
     }
-    if (typeof value === "string" && isStrictNumber(value)) {
-      cache.set(key, Number(value));
-    } else {
-      cache.set(key, value);
-    }
+    cache.set(key, value);
     if (ttl) {
       setTimeout(() => cache.delete(key), ttl);
     }
@@ -542,20 +538,16 @@ export const rawHandlers: Record<string, CommandHandler> = {
       return socket.write(`-ERR invalid key\r\n`);
     }
     const val = cache.get(key);
-    if (val && typeof val !== "number") {
+    if (val && typeof val === "string" && !isStrictNumber(val)) {
       return socket.write(
         `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
       );
     }
-    let newVal = null;
-    if (!val) {
-      newVal = 1;
-    } else {
-      if (typeof val === "number") {
-        newVal = val + 1;
-      }
+    let newVal = 1;
+    if (val) {
+      newVal = Number(val) + 1;
     }
-    cache.set(key, newVal);
+    cache.set(key, newVal.toString());
     return socket.write(RespEncoder.encode(newVal));
   },
 };
