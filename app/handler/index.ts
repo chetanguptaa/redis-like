@@ -599,22 +599,17 @@ export const rawHandlers: Record<string, CommandHandler> = {
   },
 
   INFO: (args) => {
-    const argsLength = args.length;
-    if (argsLength < 1) {
-      throw new Error("wrong number of arguments for 'exec'");
+    if (args.length === 0) {
+      return "# Replication\r\nrole:master\r\n";
     }
-    if (argsLength === 2) {
-      let output = "";
-      const secondArgs = args[1];
-      if (typeof secondArgs !== "string") {
-        throw new Error("invalid argument");
-      }
-      switch (secondArgs.toUpperCase()) {
-        case "REPLICATION": {
-          return "role:master";
-        }
-      }
+    if (
+      args.length === 1 &&
+      typeof args[0] === "string" &&
+      args[0].toUpperCase() === "REPLICATION"
+    ) {
+      return "# Replication\r\n" + "role:master\r\n";
     }
+    throw new Error("unsupported INFO section");
   },
 };
 
