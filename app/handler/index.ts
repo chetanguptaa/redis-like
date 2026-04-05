@@ -539,9 +539,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
     }
     const val = cache.get(key);
     if (val && typeof val === "string" && !isStrictNumber(val)) {
-      return socket.write(
-        `-WRONGTYPE Operation against a key holding the wrong kind of value\r\n`,
-      );
+      return socket.write(`-ERR value is not an integer or out of range\r\n`);
     }
     let newVal = 1;
     if (val) {
