@@ -470,7 +470,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
       return socket.write(RespEncoder.encode(immediate));
     }
     if (timeout === null) {
-      return socket.write(`$-1\r\n`);
+      return socket.write(`*-1\r\n`);
     }
     let resolved = false;
     const unblock = () => {
@@ -502,7 +502,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
       timer = setTimeout(() => {
         if (resolved) return;
         resolved = true;
-        socket.write(`$-1\r\n`);
+        socket.write(`*-1\r\n`);
       }, timeout);
     }
   },
