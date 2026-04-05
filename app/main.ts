@@ -13,6 +13,81 @@ const { values } = parseArgs({
   },
 });
 
+type Stage =
+  | "PING"
+  | "REPLCONF1"
+  | "REPLCONF2"
+  | "PSYNC"
+  | "FULLRESYNC"
+  | "RDB"
+  | "STREAM";
+
+export function connectToMaster(replicaOf: string, port: number) {
+  const [masterHost, masterPort] = replicaOf.split(" ");
+  const socket = net.connect(Number(masterPort), masterHost);
+  let stage: Stage = "PING";
+  let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+  let rdbBytesExpected = 0;
+  let rdbBytesReceived = 0;
+  socket.on("connect", () => {
+    socket.write(RespEncoder.encode(["PING"]));
+  });
+  socket.on("data", (chunk: Buffer) => {
+    buffer = Buffer.concat([buffer, chunk]);
+    while (true) {
+      if (stage === "RDB") {
+        const remaining = rdbBytesExpected - rdbBytesReceived;
+        if (buffer.length < remaining) {
+          rdbBytesReceived += buffer.length;
+          buffer = Buffer.alloc(0);
+          return;
+        }
+        const rdbChunk = buffer.subarray(0, remaining);
+        buffer = buffer.subarray(remaining);
+        rdbBytesReceived += rdbChunk.length;
+        console.log("RDB received complete");
+        stage = "STREAM";
+        continue;
+      }
+      const result = RespDecoder.tryDecode(buffer);
+      if (!result) return;
+      const { value, rest } = result;
+      buffer = rest;
+      handleResponse(value);
+    }
+  });
+
+  function handleResponse(response: any) {
+    if (response?.type === "simple") {
+      const value = response.value;
+      if (value === "PONG" && stage === "PING") {
+        stage = "REPLCONF1";
+        socket.write(
+          RespEncoder.encode(["REPLCONF", "listening-port", port.toString()]),
+        );
+      } else if (value === "OK" && stage === "REPLCONF1") {
+        stage = "REPLCONF2";
+        socket.write(RespEncoder.encode(["REPLCONF", "capa", "psync2"]));
+      } else if (value === "OK" && stage === "REPLCONF2") {
+        stage = "PSYNC";
+        socket.write(RespEncoder.encode(["PSYNC", "?", "-1"]));
+      } else if (value.startsWith("FULLRESYNC")) {
+        const [, replId, offset] = value.split(" ");
+        stage = "FULLRESYNC";
+      }
+    } else if (response?.type === "bulk") {
+      if (stage === "FULLRESYNC") {
+        rdbBytesExpected = response.length;
+        rdbBytesReceived = 0;
+        stage = "RDB";
+      }
+    } else if (response?.type === "array") {
+      if (stage === "STREAM") {
+      }
+    }
+  }
+}
+
 class RedisServer {
   private server: net.Server;
   private cache = new Map<string, TRespData>();
@@ -28,38 +103,7 @@ class RedisServer {
     this.server = net.createServer(this.handleConnection.bind(this));
     if (replicaOf) {
       this.replicaOf = replicaOf;
-      const [masterHost, masterPort] = replicaOf.split(" ");
-      const toMasterConnection = net.connect(Number(masterPort), masterHost);
-      toMasterConnection.write(RespEncoder.encode(["PING"]));
-      let stage: "PING" | "REPLCONF1" | "REPLCONF2" | "PSYNC" = "PING";
-      toMasterConnection.on("data", (chunk) => {
-        const response = RespDecoder.decode(chunk.toString());
-        if (
-          typeof response === "object" &&
-          response !== null &&
-          "__simple" in response
-        ) {
-          const value = response.value;
-          if (value === "PONG" && stage === "PING") {
-            stage = "REPLCONF1";
-            toMasterConnection.write(
-              RespEncoder.encode([
-                "REPLCONF",
-                "listening-port",
-                port.toString(),
-              ]),
-            );
-            toMasterConnection.write(
-              RespEncoder.encode(["REPLCONF", "capa", "psync2"]),
-            );
-          } else if (value === "OK" && stage === "REPLCONF1") {
-            stage = "REPLCONF2";
-          } else if (value === "OK" && stage === "REPLCONF2") {
-            stage = "PSYNC";
-            toMasterConnection.write(RespEncoder.encode(["PSYNC", "?", "-1"]));
-          }
-        }
-      });
+      connectToMaster(replicaOf, port);
     } else {
       this.replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
       this.replicationOffset = 0;

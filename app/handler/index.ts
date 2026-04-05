@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { SET_OPTIONS } from "../constants";
 import Stream, { type TEntry } from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
@@ -628,9 +629,14 @@ export const rawHandlers: Record<string, CommandHandler> = {
     return simpleString("OK");
   },
 
-  PSYNC: (_args, { replicationId, replicaOf }) => {
+  PSYNC: (_args, { socket, replicationId, replicaOf }) => {
     if (!replicaOf) {
-      return simpleString("FULLRESYNC " + replicationId + " " + 0);
+      socket.write(`+FULLRESYNC ${replicationId} 0\r\n`);
+      const emptyRdb = readFileSync("empty.rdb");
+      socket.write(`$${emptyRdb.length}\r\n`);
+      socket.write(emptyRdb);
+      socket.write(`\r\n`);
+      return;
     }
     throw new Error("unsupported PSYNC section for slave");
   },

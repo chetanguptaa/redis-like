@@ -10,6 +10,53 @@ class RespDecoder {
     return decoder.parse();
   }
 
+  static tryDecode(buffer: Buffer): { value: any; rest: Buffer } | null {
+    if (buffer.length === 0) return null;
+    const prefix = String.fromCharCode(buffer[0]);
+    if (prefix === "+") {
+      const end = buffer.indexOf("\r\n");
+      if (end === -1) return null;
+      const value = buffer.subarray(1, end).toString();
+      return {
+        value: { type: "simple", value },
+        rest: buffer.subarray(end + 2),
+      };
+    }
+    if (prefix === "$") {
+      const end = buffer.indexOf("\r\n");
+      if (end === -1) return null;
+      const len = parseInt(buffer.subarray(1, end).toString(), 10);
+      const total = end + 2 + len + 2;
+      if (buffer.length < total) return null;
+      return {
+        value: {
+          type: "bulk",
+          length: len,
+        },
+        rest: buffer.subarray(end + 2),
+      };
+    }
+    if (prefix === "*") {
+      const end = buffer.indexOf("\r\n");
+      if (end === -1) return null;
+      const count = parseInt(buffer.subarray(1, end).toString(), 10);
+      let offset = end + 2;
+      const items = [];
+      for (let i = 0; i < count; i++) {
+        const sub = this.tryDecode(buffer.subarray(offset));
+        if (!sub) return null;
+        items.push(sub.value);
+        offset = buffer.length - sub.rest.length;
+      }
+      return {
+        value: { type: "array", value: items },
+        rest: buffer.subarray(offset),
+      };
+    }
+
+    return null;
+  }
+
   private parse(): TRespData {
     const prefix = this.input[this.offset++];
     switch (prefix) {
