@@ -16,7 +16,11 @@ export async function executeCommand(message: TRespData, ctx: CommandContext) {
   if (!handler) {
     return ctx.socket.write(`-ERR unknown command '${command}'\r\n`);
   }
-  if (ctx.isMulti && commandRaw.toUpperCase() !== "EXEC") {
+  if (
+    ctx.isMulti &&
+    commandRaw.toUpperCase() !== "EXEC" &&
+    commandRaw.toUpperCase() !== "DISCARD"
+  ) {
     ctx.cmdQueue.push({ handler, args });
     return ctx.socket.write("+QUEUED\r\n");
   }

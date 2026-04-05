@@ -584,6 +584,18 @@ export const rawHandlers: Record<string, CommandHandler> = {
     }
     return output;
   },
+
+  DISCARD: (args, { isMulti, setIsMulti, cmdQueue }) => {
+    if (args.length > 0) {
+      throw new Error("wrong number of arguments for 'exec'");
+    }
+    if (!isMulti) {
+      throw new Error("DISCARD without MULTI");
+    }
+    setIsMulti(false);
+    cmdQueue = [];
+    return simpleString("OK");
+  },
 };
 
 export const handlers: Record<string, CommandHandler> = Object.fromEntries(
