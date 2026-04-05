@@ -582,11 +582,6 @@ export const rawHandlers: Record<string, CommandHandler> = {
         output.push(result);
       }
     }
-    if (!output.length) {
-      return {
-        type: "null-array",
-      };
-    }
     return output;
   },
 };
