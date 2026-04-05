@@ -572,7 +572,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (!ctx.isMulti) {
       throw new Error("EXEC without MULTI");
     }
-    ctx.setIsMulti(true);
+    ctx.setIsMulti(false);
     const output: TRespData[] = [];
     while (ctx.cmdQueue.length) {
       const cmd = ctx.cmdQueue.shift();
