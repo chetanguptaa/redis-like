@@ -1,5 +1,5 @@
 import type {
-  CommandHandler,
+  TCommandHandler,
   TBlocked,
   TRespData,
   TSimpleString,
@@ -10,7 +10,7 @@ export function isStrictNumber(str: string) {
   return !Number.isNaN(Number(str));
 }
 
-export const safeHandler = (handler: CommandHandler): CommandHandler => {
+export const safeHandler = (handler: TCommandHandler): TCommandHandler => {
   return async (args, ctx) => {
     try {
       return await handler(args, ctx);

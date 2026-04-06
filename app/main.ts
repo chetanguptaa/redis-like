@@ -1,7 +1,13 @@
 import * as net from "net";
 import { parseArgs } from "node:util";
 import RespParser from "./parser/RespParser";
-import type { TBlocked, TCMDQueueElem, TRespData } from "./types";
+import type {
+  ICommandContext,
+  TBlocked,
+  TCMDQueueElem,
+  TRespData,
+  TStage,
+} from "./types";
 import { executeCommand } from "./cmd-exectutor";
 import RespEncoder from "./encoder/RespEncoder";
 import RespDecoder from "./decoder/RespDecoder";
@@ -13,19 +19,14 @@ const { values } = parseArgs({
   },
 });
 
-type Stage =
-  | "PING"
-  | "REPLCONF1"
-  | "REPLCONF2"
-  | "PSYNC"
-  | "FULLRESYNC"
-  | "RDB"
-  | "STREAM";
-
-export function connectToMaster(replicaOf: string, port: number) {
-  const [masterHost, masterPort] = replicaOf.split(" ");
+export function connectToMaster(
+  myMaster: string,
+  port: number,
+  server: RedisServer,
+) {
+  const [masterHost, masterPort] = myMaster.split(" ");
   const socket = net.connect(Number(masterPort), masterHost);
-  let stage: Stage = "PING";
+  let stage: TStage = "PING";
   let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   let rdbBytesExpected = 0;
   let rdbBytesReceived = 0;
@@ -73,6 +74,8 @@ export function connectToMaster(replicaOf: string, port: number) {
         socket.write(RespEncoder.encode(["PSYNC", "?", "-1"]));
       } else if (value.startsWith("FULLRESYNC")) {
         const [, replId, offset] = value.split(" ");
+        server.masterReplicationId = replId;
+        server.masterReplicationOffset = Number(offset);
         stage = "FULLRESYNC";
       }
     } else if (response?.type === "bulk") {
@@ -83,27 +86,64 @@ export function connectToMaster(replicaOf: string, port: number) {
       }
     } else if (response?.type === "array") {
       if (stage === "STREAM") {
+        executeCommand(response.value, {
+          socket,
+          cache: server.cache,
+          blocked: server.blocked,
+          myMaster: server.myMaster,
+          replicationId: server.replicationId,
+          replicationOffset: server.replicationOffset,
+          mySlaves: server.mySlaves,
+          port: server.redisPort,
+        });
       }
     }
   }
 }
 
+export function sendToReplica(message: TRespData, ctx: ICommandContext) {
+  if (!ctx.mySlaves || ctx.mySlaves.size === 0) return;
+  const encoded = RespEncoder.encode(message);
+  for (const [id, socket] of ctx.mySlaves.entries()) {
+    if (socket.destroyed) {
+      ctx.mySlaves.delete(id);
+      continue;
+    }
+    try {
+      console.log("encoded is this ", encoded);
+      socket.write(encoded);
+    } catch (err) {
+      console.error(`Failed to write to replica ${id}:`, err);
+      socket.destroy();
+      ctx.mySlaves.delete(id);
+    }
+  }
+  if (ctx.replicationOffset !== null) {
+    ctx.replicationOffset += Buffer.byteLength(encoded);
+  }
+}
+
 class RedisServer {
-  private server: net.Server;
-  private cache = new Map<string, TRespData>();
-  private blocked = new Map<string, Array<TBlocked>>();
-  private replicaOf: string | null = null;
-  private replicationId: string | null = null;
-  private replicationOffset: number | null = null;
+  public redisPort: number | null = null;
+  public server: net.Server;
+  public cache = new Map<string, TRespData>();
+  public blocked = new Map<string, Array<TBlocked>>();
+  public replicationId: string | null = null;
+  public replicationOffset: number | null = null;
+  public masterReplicationId: string | null = null;
+  public masterReplicationOffset: number | null = null;
+  public myMaster: string | null = null;
+  public mySlaves = new Map<string, net.Socket>();
 
   constructor(
     private port: number = 6379,
     replicaOf: string | null = null,
   ) {
+    this.redisPort = port;
     this.server = net.createServer(this.handleConnection.bind(this));
     if (replicaOf) {
-      this.replicaOf = replicaOf;
-      connectToMaster(replicaOf, port);
+      this.myMaster = replicaOf;
+      connectToMaster(replicaOf, port, this);
     } else {
       this.replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
       this.replicationOffset = 0;
@@ -135,9 +175,11 @@ class RedisServer {
             isMulti = value;
           },
           cmdQueue,
-          replicaOf: this.replicaOf,
+          myMaster: this.myMaster,
           replicationId: this.replicationId,
           replicationOffset: this.replicationOffset,
+          mySlaves: this.mySlaves,
+          port: this.redisPort,
         });
       }
     });

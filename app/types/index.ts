@@ -2,7 +2,7 @@ import * as net from "net";
 import type Stream from "../data-structures/Stream";
 import type RedisError from "../error";
 
-export type RespPrimitive =
+export type TRespPrimitive =
   | string
   | number
   | Stream
@@ -12,11 +12,11 @@ export type RespPrimitive =
   | RedisError
   | null;
 
-export type TRespData = RespPrimitive | TRespData[];
+export type TRespData = TRespPrimitive | TRespData[];
 
 export type TRespNull = { type: "null-array" } | { type: "null-bulk" };
 
-export type CommandHandler = (args: TRespData[], ctx: CommandContext) => void;
+export type TCommandHandler = (args: TRespData[], ctx: ICommandContext) => void;
 
 export type TSimpleString = { __simple: true; value: string };
 
@@ -27,14 +27,25 @@ export type TBlocked = {
 
 export type TCMDQueueElem = { handler: Function; args: TRespData[] };
 
-export interface CommandContext {
+export type TStage =
+  | "PING"
+  | "REPLCONF1"
+  | "REPLCONF2"
+  | "PSYNC"
+  | "FULLRESYNC"
+  | "RDB"
+  | "STREAM";
+
+export interface ICommandContext {
   socket: net.Socket;
   cache: Map<string, TRespData>;
   blocked: Map<string, Array<TBlocked>>;
-  isMulti: boolean;
-  setIsMulti: (value: boolean) => void;
-  cmdQueue: TCMDQueueElem[];
-  replicaOf: string | null;
+  isMulti?: boolean;
+  setIsMulti?: (value: boolean) => void;
+  cmdQueue?: TCMDQueueElem[];
+  myMaster: string | null;
   replicationId: string | null;
   replicationOffset: number | null;
+  mySlaves: Map<string, net.Socket>;
+  port: number | null;
 }

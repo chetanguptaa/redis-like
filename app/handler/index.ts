@@ -3,7 +3,7 @@ import { SET_OPTIONS } from "../constants";
 import Stream, { type TEntry } from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
 import RedisError from "../error";
-import type { CommandHandler, TRespData } from "../types";
+import type { TCommandHandler, TRespData } from "../types";
 import {
   isStrictNumber,
   safeHandler,
@@ -12,7 +12,7 @@ import {
   wakeBlockedStreamsClients,
 } from "../utils";
 
-export const rawHandlers: Record<string, CommandHandler> = {
+export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'echo'");
@@ -562,7 +562,9 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (args.length > 0) {
       throw new Error("wrong number of arguments for 'multi'");
     }
-    setIsMulti(true);
+    if (setIsMulti) {
+      setIsMulti(true);
+    }
     return simpleString("OK");
   },
 
@@ -573,17 +575,22 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (!ctx.isMulti) {
       throw new Error("EXEC without MULTI");
     }
-    ctx.setIsMulti(false);
+    if (ctx.setIsMulti) {
+      ctx.setIsMulti(false);
+    }
     const output: TRespData[] = [];
-    for (const { handler, args } of ctx.cmdQueue) {
-      try {
-        const res = await handler(args, ctx);
-        output.push(res ?? null);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "unknown error";
-        output.push(new RedisError("ERR", message));
+    if (ctx.cmdQueue) {
+      for (const { handler, args } of ctx.cmdQueue) {
+        try {
+          const res = await handler(args, ctx);
+          output.push(res ?? null);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "unknown error";
+          output.push(new RedisError("ERR", message));
+        }
       }
     }
+
     return output;
   },
 
@@ -594,15 +601,19 @@ export const rawHandlers: Record<string, CommandHandler> = {
     if (!isMulti) {
       throw new Error("DISCARD without MULTI");
     }
-    setIsMulti(false);
-    cmdQueue = [];
+    if (setIsMulti) {
+      setIsMulti(false);
+    }
+    if (cmdQueue) {
+      cmdQueue = [];
+    }
     return simpleString("OK");
   },
 
-  INFO: (args, { replicaOf, replicationId, replicationOffset }) => {
+  INFO: (args, { myMaster, replicationId, replicationOffset }) => {
     if (args.length === 0) {
-      let output = `# Replication\r\nrole:${replicaOf ? "slave" : "master"}\r\n`;
-      if (!replicaOf) {
+      let output = `# Replication\r\nrole:${myMaster ? "slave" : "master"}\r\n`;
+      if (!myMaster) {
         output = output.concat(
           `master_replid:${replicationId}\r\nmaster_repl_offset:${replicationOffset}\r\n`,
         );
@@ -614,8 +625,8 @@ export const rawHandlers: Record<string, CommandHandler> = {
       typeof args[0] === "string" &&
       args[0].toUpperCase() === "REPLICATION"
     ) {
-      let output = `# Replication\r\nrole:${replicaOf ? "slave" : "master"}\r\n`;
-      if (!replicaOf) {
+      let output = `# Replication\r\nrole:${myMaster ? "slave" : "master"}\r\n`;
+      if (!myMaster) {
         output = output.concat(
           `master_replid:${replicationId}\r\nmaster_repl_offset:${replicationOffset}\r\n`,
         );
@@ -625,12 +636,22 @@ export const rawHandlers: Record<string, CommandHandler> = {
     throw new Error("unsupported INFO section");
   },
 
-  REPLCONF: () => {
+  REPLCONF: (args, { socket, mySlaves }) => {
+    if (!args.length || (args.length === 1 && args[0] === "listening-port")) {
+      throw new Error("wrong number of arguments for 'replconf'");
+    }
+    if (args[0] === "listening-port") {
+      const replicaPort = args[1];
+      const replicaId = `${socket.remoteAddress}:${replicaPort}`;
+      if (!mySlaves.has(replicaId)) {
+        mySlaves.set(replicaId, socket);
+      }
+    }
     return simpleString("OK");
   },
 
-  PSYNC: (_args, { socket, replicationId, replicaOf }) => {
-    if (!replicaOf) {
+  PSYNC: (_args, { socket, replicationId, myMaster }) => {
+    if (!myMaster) {
       socket.write(`+FULLRESYNC ${replicationId} 0\r\n`);
       const emptyRdb = readFileSync("empty.rdb");
       socket.write(`$${emptyRdb.length}\r\n`);
@@ -641,7 +662,7 @@ export const rawHandlers: Record<string, CommandHandler> = {
   },
 };
 
-export const handlers: Record<string, CommandHandler> = Object.fromEntries(
+export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
   Object.entries(rawHandlers).map(([cmd, handler]) => [
     cmd,
     safeHandler(handler),

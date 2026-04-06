@@ -1,9 +1,11 @@
+import { WRITE_CMDS } from "../constants";
 import RespEncoder from "../encoder/RespEncoder";
 import RedisError from "../error";
 import { handlers } from "../handler";
-import type { CommandContext, TRespData } from "../types";
+import { sendToReplica } from "../main";
+import type { ICommandContext, TRespData } from "../types";
 
-export async function executeCommand(message: TRespData, ctx: CommandContext) {
+export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   if (!Array.isArray(message) || message.length === 0) {
     return ctx.socket.write(`-ERR protocol error\r\n`);
   }
@@ -12,6 +14,10 @@ export async function executeCommand(message: TRespData, ctx: CommandContext) {
     return ctx.socket.write(`-ERR invalid command\r\n`);
   }
   const command = commandRaw.toUpperCase();
+  const isWriteCMD = WRITE_CMDS.includes(command);
+  if (isWriteCMD && !ctx.myMaster) {
+    sendToReplica(message, ctx);
+  }
   const handler = handlers[command];
   if (!handler) {
     return ctx.socket.write(`-ERR unknown command '${command}'\r\n`);
@@ -21,7 +27,7 @@ export async function executeCommand(message: TRespData, ctx: CommandContext) {
     commandRaw.toUpperCase() !== "EXEC" &&
     commandRaw.toUpperCase() !== "DISCARD"
   ) {
-    ctx.cmdQueue.push({ handler, args });
+    ctx.cmdQueue?.push({ handler, args });
     return ctx.socket.write("+QUEUED\r\n");
   }
   try {
