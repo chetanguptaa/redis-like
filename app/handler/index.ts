@@ -665,10 +665,9 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     ) {
       const geTackArg = args[1];
       if (geTackArg === "*") {
+        console.log("hi there");
         const offset = masterOffsetBeforeCommand;
-        socket.write(
-          RespEncoder.encode(["REPLCONF", "ACK", offset?.toString() || null]),
-        );
+        return ["REPLCONF", "ACK", offset?.toString() || 0];
       }
     } else if (!myMaster && args[0] === "GETACK") {
       throw new Error("NOT SUPPORTED");
