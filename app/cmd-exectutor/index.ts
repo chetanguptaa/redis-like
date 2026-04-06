@@ -6,7 +6,7 @@ import { sendToReplica } from "../main";
 import type { ICommandContext, TRespData } from "../types";
 
 export async function executeCommand(message: TRespData, ctx: ICommandContext) {
-  if (ctx.myMaster && message && Array.isArray(message)) {
+  if (ctx.myMaster && ctx.isFromMaster && message && Array.isArray(message)) {
     message = message.map((item: any) => item.value as string);
   }
   if (!Array.isArray(message) || message.length === 0) {
@@ -18,7 +18,12 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   }
   const command = commandRaw.toUpperCase();
   const isWriteCMD = WRITE_CMDS.includes(command);
-  if (isWriteCMD && !ctx.myMaster) {
+  if (isWriteCMD && ctx.myMaster && !ctx.isFromMaster) {
+    return ctx.socket.write(
+      `-ERREADONLY You can't write against a read only replica.\r\n`,
+    );
+  }
+  if (isWriteCMD && !ctx.myMaster && !ctx.isFromMaster) {
     sendToReplica(message, ctx);
   }
   const handler = handlers[command];
@@ -36,12 +41,12 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   try {
     const result = await handler(args, ctx);
     if (result === undefined) return;
-    if (!ctx.myMaster) {
+    if (!ctx.isFromMaster) {
       ctx.socket.write(RespEncoder.encode(result as TRespData));
     }
   } catch (err: any) {
     const message = err instanceof Error ? err.message : "unknown error";
-    if (!ctx.myMaster) {
+    if (!ctx.isFromMaster) {
       if (err instanceof RedisError) {
         ctx.socket.write(`-${err.code} ${err.message}\r\n`);
       } else {

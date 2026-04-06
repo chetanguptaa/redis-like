@@ -50,4 +50,5 @@ export interface ICommandContext {
   masterReplicationId?: string | null;
   masterReplicationOffset?: string | null;
   port: number | null;
+  isFromMaster: boolean;
 }

@@ -101,6 +101,7 @@ export function connectToMaster(
           replicationId: server.replicationId,
           replicationOffset: server.replicationOffset,
           port: server.redisPort,
+          isFromMaster: true,
         });
       }
     }
@@ -185,6 +186,7 @@ class RedisServer {
           replicationOffset: this.replicationOffset,
           mySlaves: this.mySlaves,
           port: this.redisPort,
+          isFromMaster: false,
         });
       }
     });
