@@ -636,7 +636,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("unsupported INFO section");
   },
 
-  REPLCONF: (args, { socket, mySlaves }) => {
+  REPLCONF: (args, { socket, myMaster, mySlaves, isFromMaster }) => {
     if (!args.length || (args.length === 1 && args[0] === "listening-port")) {
       throw new Error("wrong number of arguments for 'replconf'");
     }
@@ -646,6 +646,14 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       if (!mySlaves?.has(replicaId)) {
         mySlaves?.set(replicaId, socket);
       }
+    }
+    if (myMaster && args[0] === "GETACK" && args.length === 2) {
+      const geTackArg = args[1];
+      if (geTackArg === "*") {
+        socket.write(RespEncoder.encode(["REPLCONF", "ACK", 0]));
+      }
+    } else if (!myMaster && args[0] === "GETACK") {
+      throw new Error("NOT SUPPORTED");
     }
     return simpleString("OK");
   },
