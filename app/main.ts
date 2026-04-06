@@ -34,6 +34,9 @@ export function connectToMaster(
     socket.write(RespEncoder.encode(["PING"]));
   });
   socket.on("data", (chunk: Buffer) => {
+    if (stage === "STREAM" && server.masterReplicationOffset != null) {
+      server.masterReplicationOffset += chunk.length;
+    }
     buffer = Buffer.concat([buffer, chunk]);
     while (true) {
       if (stage === "RDB") {
@@ -66,12 +69,13 @@ export function connectToMaster(
       const result = RespDecoder.tryDecode(buffer);
       if (!result) break;
       const { value, rest } = result;
+      const offsetBefore = server.masterReplicationOffset;
       buffer = rest;
-      handleResponse(value);
+      handleResponse(value, offsetBefore);
     }
   });
 
-  function handleResponse(response: any) {
+  function handleResponse(response: any, offsetBefore: number | null) {
     if (response?.type === "simple") {
       const value = response.value;
       if (value === "PONG" && stage === "PING") {
@@ -102,6 +106,7 @@ export function connectToMaster(
           replicationOffset: server.replicationOffset,
           port: server.redisPort,
           isFromMaster: true,
+          masterOffsetBeforeCommand: offsetBefore,
         });
       }
     }
@@ -184,6 +189,8 @@ class RedisServer {
           myMaster: this.myMaster,
           replicationId: this.replicationId,
           replicationOffset: this.replicationOffset,
+          masterReplicationId: this.masterReplicationId,
+          masterReplicationOffset: this.masterReplicationOffset,
           mySlaves: this.mySlaves,
           port: this.redisPort,
           isFromMaster: false,
