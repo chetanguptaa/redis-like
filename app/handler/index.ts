@@ -650,7 +650,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (myMaster && args[0] === "GETACK" && args.length === 2) {
       const geTackArg = args[1];
       if (geTackArg === "*") {
-        socket.write(RespEncoder.encode(["REPLCONF", "ACK", 0]));
+        socket.write(RespEncoder.encode(["REPLCONF", "ACK", "0"]));
       }
     } else if (!myMaster && args[0] === "GETACK") {
       throw new Error("NOT SUPPORTED");
