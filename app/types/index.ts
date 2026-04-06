@@ -43,9 +43,11 @@ export interface ICommandContext {
   isMulti?: boolean;
   setIsMulti?: (value: boolean) => void;
   cmdQueue?: TCMDQueueElem[];
-  myMaster: string | null;
-  replicationId: string | null;
-  replicationOffset: number | null;
-  mySlaves: Map<string, net.Socket>;
+  mySlaves?: Map<string, net.Socket>;
+  replicationId?: string | null;
+  replicationOffset?: number | null;
+  myMaster?: string | null;
+  masterReplicationId?: string | null;
+  masterReplicationOffset?: string | null;
   port: number | null;
 }

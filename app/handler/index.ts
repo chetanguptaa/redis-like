@@ -643,8 +643,8 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (args[0] === "listening-port") {
       const replicaPort = args[1];
       const replicaId = `${socket.remoteAddress}:${replicaPort}`;
-      if (!mySlaves.has(replicaId)) {
-        mySlaves.set(replicaId, socket);
+      if (!mySlaves?.has(replicaId)) {
+        mySlaves?.set(replicaId, socket);
       }
     }
     return simpleString("OK");

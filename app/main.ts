@@ -50,8 +50,21 @@ export function connectToMaster(
         stage = "STREAM";
         continue;
       }
+      if (stage === "FULLRESYNC") {
+        const idx = buffer.indexOf("\r\n");
+        if (idx === -1) return;
+        const header = buffer.subarray(0, idx).toString();
+        if (!header.startsWith("$")) {
+          throw new Error("Expected RDB bulk length");
+        }
+        rdbBytesExpected = Number(header.slice(1));
+        rdbBytesReceived = 0;
+        buffer = buffer.subarray(idx + 2);
+        stage = "RDB";
+        continue;
+      }
       const result = RespDecoder.tryDecode(buffer);
-      if (!result) return;
+      if (!result) break;
       const { value, rest } = result;
       buffer = rest;
       handleResponse(value);
@@ -78,12 +91,6 @@ export function connectToMaster(
         server.masterReplicationOffset = Number(offset);
         stage = "FULLRESYNC";
       }
-    } else if (response?.type === "bulk") {
-      if (stage === "FULLRESYNC") {
-        rdbBytesExpected = response.length;
-        rdbBytesReceived = 0;
-        stage = "RDB";
-      }
     } else if (response?.type === "array") {
       if (stage === "STREAM") {
         executeCommand(response.value, {
@@ -93,7 +100,6 @@ export function connectToMaster(
           myMaster: server.myMaster,
           replicationId: server.replicationId,
           replicationOffset: server.replicationOffset,
-          mySlaves: server.mySlaves,
           port: server.redisPort,
         });
       }
@@ -110,7 +116,6 @@ export function sendToReplica(message: TRespData, ctx: ICommandContext) {
       continue;
     }
     try {
-      console.log("encoded is this ", encoded);
       socket.write(encoded);
     } catch (err) {
       console.error(`Failed to write to replica ${id}:`, err);
@@ -118,7 +123,7 @@ export function sendToReplica(message: TRespData, ctx: ICommandContext) {
       ctx.mySlaves.delete(id);
     }
   }
-  if (ctx.replicationOffset !== null) {
+  if (ctx.replicationOffset) {
     ctx.replicationOffset += Buffer.byteLength(encoded);
   }
 }

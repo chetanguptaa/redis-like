@@ -6,6 +6,9 @@ import { sendToReplica } from "../main";
 import type { ICommandContext, TRespData } from "../types";
 
 export async function executeCommand(message: TRespData, ctx: ICommandContext) {
+  if (ctx.myMaster && message && Array.isArray(message)) {
+    message = message.map((item: any) => item.value as string);
+  }
   if (!Array.isArray(message) || message.length === 0) {
     return ctx.socket.write(`-ERR protocol error\r\n`);
   }
@@ -33,13 +36,17 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   try {
     const result = await handler(args, ctx);
     if (result === undefined) return;
-    ctx.socket.write(RespEncoder.encode(result as TRespData));
+    if (!ctx.myMaster) {
+      ctx.socket.write(RespEncoder.encode(result as TRespData));
+    }
   } catch (err: any) {
     const message = err instanceof Error ? err.message : "unknown error";
-    if (err instanceof RedisError) {
-      ctx.socket.write(`-${err.code} ${err.message}\r\n`);
-    } else {
-      ctx.socket.write(`-ERR ${message}\r\n`);
+    if (!ctx.myMaster) {
+      if (err instanceof RedisError) {
+        ctx.socket.write(`-${err.code} ${err.message}\r\n`);
+      } else {
+        ctx.socket.write(`-ERR ${message}\r\n`);
+      }
     }
   }
 }
