@@ -69,9 +69,10 @@ export function connectToMaster(
       if (!result) break;
       const { value, rest } = result;
       const consumed = beforeLength - rest.length;
-      if (server.masterReplicationOffset !== null) {
-        server.masterReplicationOffset += consumed;
+      if (server.masterReplicationOffset === null) {
+        server.masterReplicationOffset = 0;
       }
+      server.masterReplicationOffset += consumed;
       const offsetBefore = (server.masterReplicationOffset || 0) - consumed;
       buffer = rest;
       handleResponse(value, offsetBefore);
