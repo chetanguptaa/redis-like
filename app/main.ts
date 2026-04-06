@@ -34,10 +34,8 @@ export function connectToMaster(
     socket.write(RespEncoder.encode(["PING"]));
   });
   socket.on("data", (chunk: Buffer) => {
-    if (stage === "STREAM" && server.masterReplicationOffset != null) {
-      server.masterReplicationOffset += chunk.length;
-    }
     buffer = Buffer.concat([buffer, chunk]);
+    let bytesCountedForOffset = 0;
     while (true) {
       if (stage === "RDB") {
         const remaining = rdbBytesExpected - rdbBytesReceived;
@@ -66,10 +64,15 @@ export function connectToMaster(
         stage = "RDB";
         continue;
       }
+      const beforeLength = buffer.length;
       const result = RespDecoder.tryDecode(buffer);
       if (!result) break;
       const { value, rest } = result;
-      const offsetBefore = server.masterReplicationOffset;
+      const consumed = beforeLength - rest.length;
+      if (server.masterReplicationOffset !== null) {
+        server.masterReplicationOffset += consumed;
+      }
+      const offsetBefore = (server.masterReplicationOffset || 0) - consumed;
       buffer = rest;
       handleResponse(value, offsetBefore);
     }
