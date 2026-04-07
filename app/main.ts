@@ -7,6 +7,7 @@ import type {
   TCMDQueueElem,
   TRespData,
   TStage,
+  TWaiter,
 } from "./types";
 import { executeCommand } from "./cmd-exectutor";
 import RespEncoder from "./encoder/RespEncoder";
@@ -118,19 +119,18 @@ export function connectToMaster(
 }
 
 export function sendToReplica(message: TRespData, ctx: ICommandContext) {
-  console.log("Replica count:", ctx.mySlaves?.size);
   if (!ctx.mySlaves || ctx.mySlaves.size === 0) return;
   const encoded = RespEncoder.encode(message);
   for (const [id, socket] of ctx.mySlaves.entries()) {
-    if (socket.destroyed) {
+    if (socket.socket.destroyed) {
       ctx.mySlaves.delete(id);
       continue;
     }
     try {
-      socket.write(encoded);
+      socket.socket.write(encoded);
     } catch (err) {
       console.error(`Failed to write to replica ${id}:`, err);
-      socket.destroy();
+      socket.socket.destroy();
       ctx.mySlaves.delete(id);
     }
   }
@@ -149,7 +149,8 @@ class RedisServer {
   public masterReplicationId: string | null = null;
   public masterReplicationOffset: number | null = null;
   public myMaster: string | null = null;
-  public mySlaves = new Map<string, net.Socket>();
+  public mySlaves = new Map<string, { socket: net.Socket; offset: number }>();
+  public waiters: TWaiter[] = [];
 
   constructor(
     private port: number = 6379,
@@ -199,6 +200,7 @@ class RedisServer {
           mySlaves: this.mySlaves,
           port: this.redisPort,
           isFromMaster: false,
+          waiters: this.waiters,
         });
       }
     });
