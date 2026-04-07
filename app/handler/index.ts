@@ -758,6 +758,12 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     };
     const current = getAckCount() || 0;
     console.log("current and numof repica ", current, numReplicas);
+    if (mySlaves) {
+      for (const replica of mySlaves.values()) {
+        replica.socket.write(RespEncoder.encode(["REPLCONF", "GETACK", "*"]));
+      }
+    }
+
     if (current >= numReplicas) {
       return current;
     }
@@ -778,11 +784,11 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         resolve,
       });
       console.log("my slaves ", JSON.stringify(mySlaves));
-      if (mySlaves) {
-        for (const replica of mySlaves.values()) {
-          replica.socket.write(RespEncoder.encode(["REPLCONF", "GETACK", "*"]));
-        }
-      }
+      // if (mySlaves) {
+      //   for (const replica of mySlaves.values()) {
+      //     replica.socket.write(RespEncoder.encode(["REPLCONF", "GETACK", "*"]));
+      //   }
+      // }
     }
     if (timeout > 0) {
       timer = setTimeout(() => {
