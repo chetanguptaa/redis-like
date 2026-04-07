@@ -757,6 +757,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     };
     const current = getAckCount() || 0;
+    console.log("current and numof repica ", current, numReplicas);
     if (current >= numReplicas) {
       return current;
     }
