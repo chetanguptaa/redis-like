@@ -684,6 +684,19 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     throw new Error("unsupported PSYNC section for slave");
   },
+
+  WAIT: (args, { myMaster, mySlaves }) => {
+    if (myMaster) {
+      throw new Error("unsupported WAIT for slave");
+    }
+    if (args.length < 2) {
+      throw new Error("wrong number of arguments for 'wait'");
+    }
+    const numOfReplicas = args[0];
+    if (Number(numOfReplicas) === 0 && mySlaves?.size === 0) {
+      return 0;
+    }
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
