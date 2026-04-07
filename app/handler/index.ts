@@ -656,6 +656,9 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         mySlaves?.set(replicaId, socket);
       }
     }
+    console.log("my master ", myMaster);
+    console.log("args ", JSON.stringify(args));
+    console.log("master replication offset ", masterReplicationOffset);
     if (
       myMaster &&
       args[0] === "GETACK" &&
@@ -665,7 +668,6 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     ) {
       const geTackArg = args[1];
       if (geTackArg === "*") {
-        console.log("hi there");
         const offset = masterOffsetBeforeCommand;
         return ["REPLCONF", "ACK", offset?.toString() || 0];
       }
