@@ -6,7 +6,7 @@ export const SET_OPTIONS = {
 export type TSetOption = keyof typeof SET_OPTIONS;
 
 export const WRITE_CMDS = [
-  "PING", ////// Pointer: Special command that master uses to tell the repica they are still alive
+  // "PING", ////// Pointer: Special command that master uses to tell the repica they are still alive
   "SET",
   "DEL",
   "RPUSH",

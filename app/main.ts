@@ -35,7 +35,6 @@ export function connectToMaster(
   });
   socket.on("data", (chunk: Buffer) => {
     buffer = Buffer.concat([buffer, chunk]);
-    let bytesCountedForOffset = 0;
     while (true) {
       if (stage === "RDB") {
         const remaining = rdbBytesExpected - rdbBytesReceived;
