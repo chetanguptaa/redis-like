@@ -656,9 +656,6 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         mySlaves?.set(replicaId, socket);
       }
     }
-    console.log("my master ", myMaster);
-    console.log("args ", JSON.stringify(args));
-    console.log("master replication offset ", masterReplicationOffset);
     if (
       myMaster &&
       args[0] === "GETACK" &&
