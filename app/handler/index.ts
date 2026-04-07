@@ -775,6 +775,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         numReplicas,
         resolve,
       });
+      console.log("my slaves ", JSON.stringify(mySlaves));
       if (mySlaves) {
         for (const replica of mySlaves.values()) {
           replica.socket.write(RespEncoder.encode(["REPLCONF", "GETACK", "*"]));
