@@ -41,6 +41,12 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   try {
     const result = await handler(args, ctx);
     if (result === undefined) return;
+    const shouldReply =
+      !ctx.isFromMaster ||
+      (ctx.isFromMaster && command === "REPLCONF" && args[0] === "GETACK");
+    if (shouldReply) {
+      ctx.socket.write(RespEncoder.encode(result as TRespData));
+    }
     if (!ctx.isFromMaster) {
       ctx.socket.write(RespEncoder.encode(result as TRespData));
     }
