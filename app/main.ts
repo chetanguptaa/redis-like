@@ -119,6 +119,7 @@ export function connectToMaster(
 }
 
 export function sendToReplica(message: TRespData, ctx: ICommandContext) {
+  console.log("Replica count:", ctx.mySlaves?.size);
   if (!ctx.mySlaves || ctx.mySlaves.size === 0) return;
   const encoded = RespEncoder.encode(message);
   for (const [id, socket] of ctx.mySlaves.entries()) {
@@ -134,7 +135,7 @@ export function sendToReplica(message: TRespData, ctx: ICommandContext) {
       ctx.mySlaves.delete(id);
     }
   }
-  if (ctx.replicationOffset) {
+  if (ctx.replicationOffset !== undefined && ctx.replicationOffset !== null) {
     ctx.replicationOffset += Buffer.byteLength(encoded);
   }
 }
