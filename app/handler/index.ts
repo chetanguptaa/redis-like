@@ -692,10 +692,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'wait'");
     }
-    const numOfReplicas = args[0];
-    if (Number(numOfReplicas) === 0 && mySlaves?.size === 0) {
-      return 0;
-    }
+    return mySlaves?.size || 0;
   },
 };
 
