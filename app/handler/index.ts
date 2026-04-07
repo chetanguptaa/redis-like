@@ -764,7 +764,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     }
 
-    if (current >= numReplicas) {
+    if (numReplicas >= current) {
       return current;
     }
     let resolved = false;
@@ -782,7 +782,6 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         targetOffset,
         numReplicas,
         resolve,
-        ackedReplicas: new Set<string>(),
       });
       console.log("my slaves ", JSON.stringify(mySlaves));
       // if (mySlaves) {
