@@ -775,13 +775,17 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         numReplicas,
         resolve,
       });
+      if (mySlaves) {
+        for (const replica of mySlaves.values()) {
+          replica.socket.write(RespEncoder.encode(["REPLCONF", "GETACK", "*"]));
+        }
+      }
     }
     if (timeout > 0) {
       timer = setTimeout(() => {
         resolve(getAckCount() || 0);
       }, timeout * 1000);
     }
-    return;
   },
 };
 
