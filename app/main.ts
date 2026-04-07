@@ -111,6 +111,7 @@ export function connectToMaster(
           port: server.redisPort,
           isFromMaster: true,
           masterOffsetBeforeCommand: offsetBefore,
+          masterReplicationOffset: server.masterReplicationOffset,
         });
       }
     }
