@@ -768,6 +768,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       if (timer) clearTimeout(timer);
       socket.write(RespEncoder.encode(count));
     };
+    if (!waiters) waiters = [];
     if (waiters) {
       waiters.push({
         socket,
