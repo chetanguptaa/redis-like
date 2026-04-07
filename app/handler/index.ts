@@ -655,7 +655,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       const replicaId = `${socket.remoteAddress}:${replicaPort}`;
       if (!mySlaves?.has(replicaId)) {
         mySlaves?.set(replicaId, {
-          offset: -1,
+          offset: 0,
           socket,
         });
       }
@@ -682,7 +682,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       if (!mySlaves?.has(replicaId)) {
         mySlaves?.set(replicaId, {
           socket,
-          offset: -1,
+          offset: 0,
         });
       }
       const replica = mySlaves?.get(replicaId);
@@ -782,6 +782,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         targetOffset,
         numReplicas,
         resolve,
+        ackedReplicas: new Set<string>(),
       });
       console.log("my slaves ", JSON.stringify(mySlaves));
       // if (mySlaves) {
