@@ -642,7 +642,6 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       socket,
       myMaster,
       mySlaves,
-      waiters,
       masterReplicationOffset,
       masterOffsetBeforeCommand,
     },
@@ -654,10 +653,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       const replicaPort = args[1];
       const replicaId = `${socket.remoteAddress}:${replicaPort}`;
       if (!mySlaves?.has(replicaId)) {
-        mySlaves?.set(replicaId, {
-          offset: 0,
-          socket,
-        });
+        mySlaves?.set(replicaId, socket);
       }
     }
     if (
@@ -674,43 +670,9 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     } else if (!myMaster && args[0] === "GETACK") {
       throw new Error("NOT SUPPORTED");
-    }
-    if (!myMaster && args[0] === "ACK" && args.length === 2) {
-      const offset = parseInt(String(args[1]), 10);
-      if (isNaN(offset)) return;
-      const replicaId = `${socket.remoteAddress}:${socket.remotePort}`;
-      if (!mySlaves?.has(replicaId)) {
-        mySlaves?.set(replicaId, {
-          socket,
-          offset: 0,
-        });
-      }
-      const replica = mySlaves?.get(replicaId);
-      if (replica) {
-        replica.offset = offset;
-      }
-      function resolveWaiters() {
-        if (waiters && mySlaves) {
-          for (const waiter of waiters) {
-            let count = 0;
-            for (const replica of mySlaves.values()) {
-              if (replica.offset >= waiter.targetOffset) {
-                count++;
-              }
-            }
-            if (count >= waiter.numReplicas) {
-              waiter.resolve(count);
-            }
-          }
-          for (let i = waiters.length - 1; i >= 0; i--) {
-            if ((waiters[i] as any).resolved) {
-              waiters.splice(i, 1);
-            }
-          }
-        }
-      }
-      resolveWaiters();
-      return;
+    } else if (args[0] === "ACK") {
+      (socket as any).replOffset = Number(args[1]);
+      return undefined;
     }
     return simpleString("OK");
   },
@@ -726,75 +688,66 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("unsupported PSYNC section for slave");
   },
 
-  WAIT: (
-    args,
-    { socket, myMaster, mySlaves, waiters, masterReplicationOffset },
-  ) => {
+  WAIT: (args, { myMaster, mySlaves, replicationOffset }) => {
     if (myMaster) {
       throw new Error("unsupported WAIT for slave");
     }
     if (args.length !== 2) {
       throw new Error("wrong number of arguments for 'wait'");
     }
-    const numReplicas = parseInt(String(args[0]), 10);
-    const timeout = parseFloat(String(args[1]));
-    if (isNaN(numReplicas) || numReplicas < 0) {
-      throw new Error("numreplicas is not a number");
+    const numReplicasTarget = Number(args[0]);
+    const timeout = Number(args[1]);
+    if (
+      replicationOffset === 0 ||
+      !mySlaves ||
+      mySlaves.size === 0 ||
+      numReplicasTarget === 0
+    ) {
+      return mySlaves?.size || 0;
     }
-    if (isNaN(timeout)) {
-      throw new Error("timeout is not a number");
+    let ackedCount = 0;
+    for (const slaveSocket of mySlaves.values()) {
+      if (((slaveSocket as any).replOffset || 0) >= (replicationOffset || 0)) {
+        ackedCount++;
+      }
     }
-    const targetOffset = masterReplicationOffset ?? 0;
-    const getAckCount = () => {
-      let count = 0;
-      if (mySlaves) {
-        for (const replica of mySlaves.values()) {
-          if (replica.offset >= targetOffset) {
+    if (ackedCount >= numReplicasTarget) {
+      return ackedCount;
+    }
+    const getackCmd = RespEncoder.encode(["REPLCONF", "GETACK", "*"]);
+    for (const slaveSocket of mySlaves.values()) {
+      slaveSocket.write(getackCmd);
+    }
+    return new Promise((resolve) => {
+      const targetOffset = replicationOffset || 0;
+      let timer: NodeJS.Timeout | null = null;
+      const check = () => {
+        let count = 0;
+        for (const slaveSocket of mySlaves.values()) {
+          if (((slaveSocket as any).replOffset || 0) >= targetOffset) {
             count++;
           }
         }
-        return count;
+        if (count >= numReplicasTarget) {
+          if (timer) clearTimeout(timer);
+          clearInterval(interval);
+          resolve(count);
+        }
+      };
+      const interval = setInterval(check, 10);
+      if (timeout > 0) {
+        timer = setTimeout(() => {
+          clearInterval(interval);
+          let count = 0;
+          for (const slaveSocket of mySlaves.values()) {
+            if (((slaveSocket as any).replOffset || 0) >= targetOffset) {
+              count++;
+            }
+          }
+          resolve(count);
+        }, timeout);
       }
-    };
-    const current = getAckCount() || 0;
-    console.log("current and numof repica ", current, numReplicas);
-    if (mySlaves) {
-      for (const replica of mySlaves.values()) {
-        replica.socket.write(RespEncoder.encode(["REPLCONF", "GETACK", "*"]));
-      }
-    }
-
-    if (numReplicas >= current) {
-      return current;
-    }
-    let resolved = false;
-    let timer: NodeJS.Timeout | null = null;
-    const resolve = (count: number) => {
-      if (resolved) return;
-      resolved = true;
-      if (timer) clearTimeout(timer);
-      socket.write(RespEncoder.encode(count));
-    };
-    if (!waiters) waiters = [];
-    if (waiters) {
-      waiters.push({
-        socket,
-        targetOffset,
-        numReplicas,
-        resolve,
-      });
-      console.log("my slaves ", JSON.stringify(mySlaves));
-      // if (mySlaves) {
-      //   for (const replica of mySlaves.values()) {
-      //     replica.socket.write(RespEncoder.encode(["REPLCONF", "GETACK", "*"]));
-      //   }
-      // }
-    }
-    if (timeout > 0) {
-      timer = setTimeout(() => {
-        resolve(getAckCount() || 0);
-      }, timeout * 1000);
-    }
+    });
   },
 };
 

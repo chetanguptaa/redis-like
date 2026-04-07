@@ -36,13 +36,6 @@ export type TStage =
   | "RDB"
   | "STREAM";
 
-export type TWaiter = {
-  socket: net.Socket;
-  targetOffset: number;
-  numReplicas: number;
-  resolve: (count: number) => void;
-};
-
 export interface ICommandContext {
   socket: net.Socket;
   cache: Map<string, TRespData>;
@@ -50,13 +43,7 @@ export interface ICommandContext {
   isMulti?: boolean;
   setIsMulti?: (value: boolean) => void;
   cmdQueue?: TCMDQueueElem[];
-  mySlaves?: Map<
-    string,
-    {
-      socket: net.Socket;
-      offset: number;
-    }
-  >;
+  mySlaves?: Map<string, net.Socket>;
   replicationId?: string | null;
   replicationOffset?: number | null;
   myMaster?: string | null;
@@ -65,5 +52,4 @@ export interface ICommandContext {
   port: number | null;
   isFromMaster: boolean;
   masterOffsetBeforeCommand?: number | null;
-  waiters?: TWaiter[];
 }

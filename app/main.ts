@@ -7,7 +7,6 @@ import type {
   TCMDQueueElem,
   TRespData,
   TStage,
-  TWaiter,
 } from "./types";
 import { executeCommand } from "./cmd-exectutor";
 import RespEncoder from "./encoder/RespEncoder";
@@ -122,15 +121,15 @@ export function sendToReplica(message: TRespData, ctx: ICommandContext) {
   if (!ctx.mySlaves || ctx.mySlaves.size === 0) return;
   const encoded = RespEncoder.encode(message);
   for (const [id, socket] of ctx.mySlaves.entries()) {
-    if (socket.socket.destroyed) {
+    if (socket.destroyed) {
       ctx.mySlaves.delete(id);
       continue;
     }
     try {
-      socket.socket.write(encoded);
+      socket.write(encoded);
     } catch (err) {
       console.error(`Failed to write to replica ${id}:`, err);
-      socket.socket.destroy();
+      socket.destroy();
       ctx.mySlaves.delete(id);
     }
   }
@@ -149,8 +148,7 @@ class RedisServer {
   public masterReplicationId: string | null = null;
   public masterReplicationOffset: number | null = null;
   public myMaster: string | null = null;
-  public mySlaves = new Map<string, { socket: net.Socket; offset: number }>();
-  public waiters: TWaiter[] = [];
+  public mySlaves = new Map<string, net.Socket>();
 
   constructor(
     private port: number = 6379,
@@ -180,6 +178,7 @@ class RedisServer {
     let isMulti = false;
     const cmdQueue: TCMDQueueElem[] = [];
     const parser = new RespParser();
+    const self = this;
     socket.on("data", (chunk) => {
       const messages = parser.push(chunk.toString());
       for (const msg of messages) {
@@ -194,13 +193,19 @@ class RedisServer {
           cmdQueue,
           myMaster: this.myMaster,
           replicationId: this.replicationId,
-          replicationOffset: this.replicationOffset,
+          // replicationOffset: this.replicationOffset,
           masterReplicationId: this.masterReplicationId,
           masterReplicationOffset: this.masterReplicationOffset,
           mySlaves: this.mySlaves,
           port: this.redisPort,
           isFromMaster: false,
-          waiters: this.waiters,
+
+          get replicationOffset() {
+            return self.replicationOffset;
+          },
+          set replicationOffset(val) {
+            self.replicationOffset = val;
+          },
         });
       }
     });
