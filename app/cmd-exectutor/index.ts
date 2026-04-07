@@ -47,9 +47,6 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
     if (shouldReply) {
       ctx.socket.write(RespEncoder.encode(result as TRespData));
     }
-    if (!ctx.isFromMaster) {
-      ctx.socket.write(RespEncoder.encode(result as TRespData));
-    }
   } catch (err: any) {
     const message = err instanceof Error ? err.message : "unknown error";
     if (!ctx.isFromMaster) {
