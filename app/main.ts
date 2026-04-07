@@ -16,6 +16,8 @@ const { values } = parseArgs({
   options: {
     port: { type: "string" },
     replicaof: { type: "string" },
+    dir: { type: "string" },
+    dbfilename: { type: "string" },
   },
 });
 
@@ -111,6 +113,8 @@ export function connectToMaster(
           isFromMaster: true,
           masterOffsetBeforeCommand: offsetBefore,
           masterReplicationOffset: server.masterReplicationOffset,
+          dbFileName: server.dbFileName,
+          dir: server.dir,
         });
       }
     }
@@ -149,13 +153,19 @@ class RedisServer {
   public masterReplicationOffset: number | null = null;
   public myMaster: string | null = null;
   public mySlaves = new Map<string, net.Socket>();
+  public dir: string | null = null;
+  public dbFileName: string | null = null;
 
   constructor(
     private port: number = 6379,
     replicaOf: string | null = null,
+    dir: string | null = null,
+    dbFileName: string | null = null,
   ) {
     this.redisPort = port;
     this.server = net.createServer(this.handleConnection.bind(this));
+    this.dir = dir;
+    this.dbFileName = dbFileName;
     if (replicaOf) {
       this.myMaster = replicaOf;
       connectToMaster(replicaOf, port, this);
@@ -193,12 +203,13 @@ class RedisServer {
           cmdQueue,
           myMaster: this.myMaster,
           replicationId: this.replicationId,
-          // replicationOffset: this.replicationOffset,
           masterReplicationId: this.masterReplicationId,
           masterReplicationOffset: this.masterReplicationOffset,
           mySlaves: this.mySlaves,
           port: this.redisPort,
           isFromMaster: false,
+          dir: this.dir,
+          dbFileName: this.dbFileName,
 
           get replicationOffset() {
             return self.replicationOffset;
@@ -216,4 +227,9 @@ class RedisServer {
   }
 }
 
-new RedisServer(Number(values.port) || 6379, values.replicaof).start();
+new RedisServer(
+  Number(values.port) || 6379,
+  values.replicaof,
+  values.dir,
+  values.dbfilename,
+).start();

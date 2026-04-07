@@ -52,4 +52,6 @@ export interface ICommandContext {
   port: number | null;
   isFromMaster: boolean;
   masterOffsetBeforeCommand?: number | null;
+  dir: string | null;
+  dbFileName: string | null;
 }

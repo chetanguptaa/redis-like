@@ -749,6 +749,23 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     });
   },
+
+  CONFIG: (args, { dir, dbFileName }) => {
+    if (args.length < 2) {
+      throw new Error("wrong number of arguments for 'CONFIG'");
+    }
+    const arg1 = args[0];
+    const configParam = args[1];
+
+    if (arg1 === "GET") {
+      if (configParam === "dir") {
+        return ["dir", dir];
+      } else if (configParam === "dbfilename") {
+        return ["dbfilename", dbFileName];
+      }
+    }
+    throw new Error("unsupported CONFIG section");
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
