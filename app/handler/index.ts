@@ -856,7 +856,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         return channelsToSubscribersMap.get(channel)?.length;
       }
     }
-    throw new Error("unsupported subscribe section");
+    throw new Error("unsupported publish section");
   },
 
   UNSUBSCRIBE: (
@@ -872,14 +872,23 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       subscribedChannels &&
       channelsToSubscribersMap
     ) {
-      subscribedChannels = subscribedChannels.filter((sc) => sc !== channel);
-      let subscribers = channelsToSubscribersMap.get(channel);
+      subscribedChannels.splice(
+        0,
+        subscribedChannels.length,
+        ...subscribedChannels.filter((sc) => sc !== channel),
+      );
+      const subscribers = channelsToSubscribersMap.get(channel);
       if (subscribers) {
-        subscribers = subscribers.filter((s) => s !== socket);
+        const updatedSubscribers = subscribers.filter((s) => s !== socket);
+        if (updatedSubscribers.length > 0) {
+          channelsToSubscribersMap.set(channel, updatedSubscribers);
+        } else {
+          channelsToSubscribersMap.delete(channel); // optional cleanup
+        }
       }
       return ["unsubscribe", channel, subscribedChannels.length];
     }
-    throw new Error("unsupported subscribe section");
+    throw new Error("unsupported unsubscribe section");
   },
 };
 
