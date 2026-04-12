@@ -179,28 +179,3 @@ export const geohashGetDistance = (
 };
 
 const degRad = (ang: number): number => ang * (Math.PI / 180);
-
-const radians = (degree: number): number => {
-  return (degree * Math.PI) / 180;
-};
-
-export const haversine = (
-  longitude1: number,
-  latitude1: number,
-  longitude2: number,
-  latitude2: number,
-): number => {
-  const R: number = 6372.797560856; // km
-  const deltaLat: number = radians(latitude2 - latitude1);
-  const deltaLon: number = radians(longitude2 - longitude1);
-  latitude1 = radians(latitude1);
-  latitude2 = radians(latitude2);
-  const a: number =
-    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-    Math.sin(deltaLon / 2) *
-      Math.sin(deltaLon / 2) *
-      Math.cos(latitude1) *
-      Math.cos(latitude2);
-  const c: number = 2 * Math.asin(Math.sqrt(a));
-  return R * c * 1000;
-};

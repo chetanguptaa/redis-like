@@ -8,7 +8,6 @@ import {
   decodeGeohash,
   encodeGeohash,
   geohashGetDistance,
-  haversine,
   isBigIntString,
   isStrictNumber,
   safeHandler,
@@ -1170,8 +1169,13 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       throw new Error("wrong number of arguments for 'acl'");
     }
     const arg = args[0];
-    if (typeof arg === "string" && arg === "WHOAMI") {
-      return "default";
+    if (typeof arg === "string") {
+      if (arg === "WHOAMI") {
+        return "default";
+      }
+      if (arg === "GETUSER") {
+        return ["flags", []];
+      }
     }
     throw new Error("Unsupported acl section");
   },
