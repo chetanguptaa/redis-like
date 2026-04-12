@@ -1177,7 +1177,10 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         const username = args[1] as string;
         if (!users) throw new Error("unsupported acl section");
         if (!users.has(username)) return null;
-        return ["flags", ["nopass"], "passwords", []];
+        const password = users.get(username);
+        const flags = [];
+        if (!password) flags.push("nopass");
+        return ["flags", flags, "passwords", []];
       }
       if (arg === "SETUSER") {
         if (!users) throw new Error("unsupported acl section");
@@ -1197,9 +1200,9 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         }
         if (value === "nopass" || value === "on" || value === "off") {
           if (!users.has(username)) {
-            users.set(username, "");
+            users.set(username, null);
           }
-          return "OK";
+          return simpleString("OK");
         }
       }
     }
