@@ -1165,7 +1165,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
   },
 
   ACL: (args) => {
-    if (args.length !== 1) {
+    if (args.length < 1) {
       throw new Error("wrong number of arguments for 'acl'");
     }
     const arg = args[0];
