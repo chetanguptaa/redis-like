@@ -3,8 +3,14 @@ import { SET_OPTIONS } from "../constants";
 import Stream, { type TEntry } from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
 import RedisError from "../error";
-import type { TCommandHandler, TRespData, TSimpleString } from "../types";
+import type {
+  TCommandHandler,
+  TGeoEntry,
+  TRespData,
+  TSimpleString,
+} from "../types";
 import {
+  encodeGeohash,
   isStrictNumber,
   safeHandler,
   simpleString,
@@ -904,7 +910,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       heap = new MinHeap();
       zCache.set(key, heap);
     }
-    const existingIndex = heap.findByValue(value);
+    const existingIndex = heap.findByField("value", value);
     if (existingIndex !== -1) {
       heap.updateScore(existingIndex, score);
       return 0;
@@ -972,7 +978,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (!zCache) throw new Error("unsupported zscore section");
     const heap = zCache.get(key);
     if (!heap || heap.size() === 0) return null;
-    const index = heap.findByValue(value);
+    const index = heap.findByField("value", value);
     return index === -1 ? null : String(heap.getScore(index));
   },
 
@@ -985,10 +991,46 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (!zCache) throw new Error("unsupported zrem section");
     const heap = zCache.get(key);
     if (!heap || heap.size() === 0) return 0;
-    const index = heap.findByValue(value);
+    const index = heap.findByField("value", value);
     if (index === -1) return 0;
     heap.remove(index);
     return 1;
+  },
+
+  GEOADD: (args, { geoCache }) => {
+    if (args.length < 4 || (args.length - 1) % 3 !== 0) {
+      throw new Error("wrong number of arguments for 'geoadd'");
+    }
+    const key = args[0] as string;
+    if (!geoCache) throw new Error("unsupported geoadd section");
+    let heap = geoCache.get(key);
+    if (!heap) {
+      heap = new MinHeap<TGeoEntry>();
+      geoCache.set(key, heap);
+    }
+    let added = 0;
+    for (let i = 1; i < args.length; i += 3) {
+      const lon = Number(args[i]);
+      const lat = Number(args[i + 1]);
+      const member = args[i + 2] as string;
+      if (lat < -85.05112878 || lat > 85.05112878) {
+        throw new Error(`invalid latitude ${lat}`);
+      }
+      if (lon < -180 || lon > 180) {
+        throw new Error(`invalid longitude ${lon}`);
+      }
+      const score = encodeGeohash(lat, lon);
+      const existingIndex = heap.findByField("member", member);
+      if (existingIndex !== -1) {
+        heap.updateScore(existingIndex, score);
+        (heap.get(existingIndex) as TGeoEntry).lat = lat;
+        (heap.get(existingIndex) as TGeoEntry).lon = lon;
+      } else {
+        heap.insert({ member, lat, lon, score });
+        added++;
+      }
+    }
+    return added;
   },
 };
 

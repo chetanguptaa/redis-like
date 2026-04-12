@@ -54,3 +54,28 @@ export const simpleString = (value: string): TSimpleString => ({
   __simple: true,
   value,
 });
+
+export const encodeGeohash = (lat: number, lon: number): number => {
+  const latNorm = (lat + 90) / 180;
+  const lonNorm = (lon + 180) / 360;
+  let hash = 0;
+  for (let i = 25; i >= 0; i--) {
+    const latBit = Math.floor(latNorm * (1 << (i + 1))) & 1;
+    const lonBit = Math.floor(lonNorm * (1 << (i + 1))) & 1;
+    hash = hash * 4 + lonBit * 2 + latBit;
+  }
+  return hash;
+};
+
+export const decodeGeohash = (score: number): { lat: number; lon: number } => {
+  let latNorm = 0,
+    lonNorm = 0;
+  for (let i = 25; i >= 0; i--) {
+    lonNorm += ((score >> (2 * i + 1)) & 1) / (1 << (25 - i + 1));
+    latNorm += ((score >> (2 * i)) & 1) / (1 << (25 - i + 1));
+  }
+  return {
+    lat: latNorm * 180 - 90,
+    lon: lonNorm * 360 - 180,
+  };
+};

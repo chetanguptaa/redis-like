@@ -5,6 +5,7 @@ import type {
   ICommandContext,
   TBlocked,
   TCMDQueueElem,
+  TGeoEntry,
   TRespData,
   TStage,
   TZSet,
@@ -150,7 +151,7 @@ class RedisServer {
   public redisPort: number | null = null;
   public server: net.Server;
   public cache = new Map<string, TRespData>();
-  public zCache = new Map<string, MinHeap>();
+  public zCache = new Map<string, MinHeap<TZSet>>();
   public blocked = new Map<string, Array<TBlocked>>();
   public replicationId: string | null = null;
   public replicationOffset: number | null = null;
@@ -161,6 +162,7 @@ class RedisServer {
   public dir: string | null = null;
   public dbFileName: string | null = null;
   public channelsToSubscribersMap = new Map<string, net.Socket[]>();
+  public geoCache = new Map<string, MinHeap<TGeoEntry>>();
 
   constructor(
     private port: number = 6379,
@@ -309,6 +311,7 @@ class RedisServer {
           isSubscribeMode,
           channelsToSubscribersMap: this.channelsToSubscribersMap,
           zCache: this.zCache,
+          geoCache: this.geoCache,
           setIsSubscribeMode: (value: boolean) => {
             isSubscribeMode = value;
           },

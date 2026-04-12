@@ -1,7 +1,6 @@
-import type { TZSet } from "../types";
+export class MinHeap<T extends { score: number }> {
+  private heap: T[] = [];
 
-export class MinHeap {
-  private heap: TZSet[] = [];
   private parent(i: number) {
     return Math.floor((i - 1) / 2);
   }
@@ -33,10 +32,10 @@ export class MinHeap {
       this.bubbleDown(smallest);
     }
   }
-  findByValue(value: string): number {
-    return this.heap.findIndex((item) => item.value === value);
+  findByField<K extends keyof T>(field: K, val: T[K]): number {
+    return this.heap.findIndex((item) => item[field] === val);
   }
-  insert(item: TZSet): void {
+  insert(item: T): void {
     this.heap.push(item);
     this.bubbleUp(this.heap.length - 1);
   }
@@ -46,21 +45,6 @@ export class MinHeap {
     if (newScore < oldScore) this.bubbleUp(index);
     else this.bubbleDown(index);
   }
-  toArray(): TZSet[] {
-    return [...this.heap];
-  }
-  size(): number {
-    return this.heap.length;
-  }
-  toSortedArray(): TZSet[] {
-    return [...this.heap].sort((a, b) => {
-      if (a.score !== b.score) return a.score - b.score;
-      return a.value < b.value ? -1 : a.value > b.value ? 1 : 0;
-    });
-  }
-  getScore(index: number): number {
-    return this.heap[index].score;
-  }
   remove(index: number): void {
     const last = this.heap.length - 1;
     this.swap(index, last);
@@ -69,5 +53,25 @@ export class MinHeap {
       this.bubbleUp(index);
       this.bubbleDown(index);
     }
+  }
+  getScore(index: number): number {
+    return this.heap[index].score;
+  }
+  get(index: number): T {
+    return this.heap[index];
+  }
+  toArray(): T[] {
+    return [...this.heap];
+  }
+  size(): number {
+    return this.heap.length;
+  }
+  toSortedArray(): T[] {
+    return [...this.heap].sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score;
+      const aKey = (a as any).value ?? (a as any).member ?? "";
+      const bKey = (b as any).value ?? (b as any).member ?? "";
+      return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
+    });
   }
 }

@@ -26,6 +26,13 @@ export type TZSet = {
   score: number;
 };
 
+export type TGeoEntry = {
+  member: string;
+  lat: number;
+  lon: number;
+  score: number;
+};
+
 export type TBlocked = {
   socket: net.Socket;
   unblock: (key?: string, element?: TRespData) => void;
@@ -64,5 +71,6 @@ export interface ICommandContext {
   subscribedChannels?: string[];
   isSubscribeMode?: boolean;
   setIsSubscribeMode?: (value: boolean) => void;
-  zCache?: Map<string, MinHeap>;
+  zCache?: Map<string, MinHeap<TZSet>>;
+  geoCache?: Map<string, MinHeap<TGeoEntry>>;
 }
