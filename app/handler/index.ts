@@ -1174,7 +1174,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         return "default";
       }
       if (arg === "GETUSER") {
-        return ["flags", []];
+        return ["flags", ["nopass"]];
       }
     }
     throw new Error("Unsupported acl section");
