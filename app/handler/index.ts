@@ -1062,12 +1062,11 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     } else {
       for (const place in places) {
-        const arr: TRespData = [];
+        let arr: TRespData = null;
         const idx = heap.findByField("member", place);
-        if (idx === -1) {
-          arr.push(null);
-        } else {
+        if (idx !== -1) {
           const { lat, lon } = heap.get(idx);
+          arr = [];
           arr.push(lat.toString());
           arr.push(lon.toString());
         }
