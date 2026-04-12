@@ -30,6 +30,9 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   if (!handler) {
     return ctx.socket.write(`-ERR unknown command '${command}'\r\n`);
   }
+  if (ctx.isMulti && commandRaw.toUpperCase() === "WATCH") {
+    return ctx.socket.write("-ERR WATCH inside MULTI is not allowed\r\n");
+  }
   if (
     ctx.isMulti &&
     commandRaw.toUpperCase() !== "EXEC" &&
