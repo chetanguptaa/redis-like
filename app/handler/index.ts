@@ -1284,7 +1284,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return simpleString("OK");
   },
 
-  UNWATCH: async (_args, { socket, watchingKeys, cache, zCache, geoCache }) => {
+  UNWATCH: async (_args, { socket, watchingKeys }) => {
     if (!watchingKeys) throw new Error("unsupported unwatch section");
     watchingKeys.delete(socket);
     return simpleString("OK");
