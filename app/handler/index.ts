@@ -1164,7 +1164,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return results;
   },
 
-  ACL: (args, { users }) => {
+  ACL: async (args, { users }) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'acl'");
     }
@@ -1185,8 +1185,15 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         const value = args[2] as string;
         if (value.startsWith(">")) {
           const password = value.slice(1);
-          users.set(username, password);
-          return "OK";
+          const encoder = new TextEncoder();
+          const data = encoder.encode(password);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const hashHex = hashArray
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+          users.set(username, hashHex);
+          return simpleString("OK");
         }
         if (value === "nopass" || value === "on" || value === "off") {
           if (!users.has(username)) {
