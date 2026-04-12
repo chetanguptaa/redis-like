@@ -1283,6 +1283,15 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     watchingKeys.set(socket, [...existing, ...newEntries]);
     return simpleString("OK");
   },
+
+  UNWATCH: async (args, { socket, watchingKeys, cache, zCache, geoCache }) => {
+    if (args.length < 1) {
+      throw new Error("wrong number of arguments for 'watch'");
+    }
+    if (!watchingKeys) throw new Error("unsupported unwatch section");
+    watchingKeys.delete(socket);
+    return simpleString("OK");
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
