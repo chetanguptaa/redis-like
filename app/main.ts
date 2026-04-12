@@ -164,7 +164,10 @@ class RedisServer {
   public channelsToSubscribersMap = new Map<string, net.Socket[]>();
   public geoCache = new Map<string, MinHeap<TGeoEntry>>();
   public users = new Map<string, string[]>();
-  public watchingKeys = new Map<net.Socket, string[]>();
+  public watchingKeys = new Map<
+    net.Socket,
+    { key: string; valueAtWatch: TRespData }[]
+  >();
   public dirtyKeys = new Set<string>();
 
   constructor(

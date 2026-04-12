@@ -596,7 +596,14 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     if (ctx.watchingKeys && ctx.socket && ctx.dirtyKeys) {
       const watched = ctx.watchingKeys.get(ctx.socket) || [];
-      const aborted = watched.some((key) => ctx.dirtyKeys!.has(key));
+      const aborted = watched.some(({ key, valueAtWatch }) => {
+        const currentVal =
+          ctx.cache.get(key) ??
+          ctx.zCache?.get(key) ??
+          ctx.geoCache?.get(key) ??
+          null;
+        return currentVal !== valueAtWatch;
+      });
       ctx.watchingKeys.delete(ctx.socket);
       if (aborted) {
         return {
@@ -1262,18 +1269,18 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     );
   },
 
-  WATCH: async (args, { socket, watchingKeys }) => {
+  WATCH: async (args, { socket, watchingKeys, cache, zCache, geoCache }) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'watch'");
     }
-    const key: string = args[0] as string;
     if (!watchingKeys) throw new Error("unsupported watch section");
-    const keys = watchingKeys.get(socket);
-    if (!keys) {
-      watchingKeys.set(socket, [key]);
-    } else {
-      watchingKeys.set(socket, [...(watchingKeys.get(socket) || []), key]);
-    }
+    const existing = watchingKeys.get(socket) || [];
+    const newEntries: any = (args as string[]).map((key) => ({
+      key,
+      valueAtWatch:
+        cache?.get(key) ?? zCache?.get(key) ?? geoCache?.get(key) ?? null,
+    }));
+    watchingKeys.set(socket, [...existing, ...newEntries]);
     return simpleString("OK");
   },
 };
