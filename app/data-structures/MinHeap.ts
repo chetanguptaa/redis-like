@@ -67,8 +67,9 @@ export class MinHeap<T extends { score: number | bigint }> {
     return this.heap.length;
   }
   toSortedArray(): T[] {
-    return [...this.heap].sort((a: any, b: any) => {
-      if (a.score !== b.score) return a.score - b.score;
+    return [...this.heap].sort((a, b) => {
+      if (a.score < b.score) return -1;
+      if (a.score > b.score) return 1;
       const aKey = (a as any).value ?? (a as any).member ?? "";
       const bKey = (b as any).value ?? (b as any).member ?? "";
       return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
