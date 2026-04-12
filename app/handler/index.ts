@@ -843,7 +843,11 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       if (channelsToSubscribersMap.has(channel)) {
         const subscribers = channelsToSubscribersMap.get(channel);
         if (subscribers) {
-          const publishedContent = RespEncoder.encode(content);
+          const publishedContent = RespEncoder.encode([
+            "message",
+            channel,
+            content,
+          ]);
           for (const subscriberSocket of subscribers.values()) {
             subscriberSocket.write(publishedContent);
           }
