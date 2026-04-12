@@ -1179,8 +1179,13 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         if (!users.has(username)) return null;
         const password = users.get(username);
         const flags = [];
-        if (!password) flags.push("nopass");
-        return ["flags", flags, "passwords", [password]];
+        const passwords = [];
+        if (!password) {
+          flags.push("nopass");
+        } else {
+          passwords.push(password);
+        }
+        return ["flags", flags, "passwords", passwords];
       }
       if (arg === "SETUSER") {
         if (!users) throw new Error("unsupported acl section");
