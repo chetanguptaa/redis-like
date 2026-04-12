@@ -1,6 +1,7 @@
 import * as net from "net";
 import type Stream from "../data-structures/Stream";
 import type RedisError from "../error";
+import type { MinHeap } from "../data-structures/MinHeap";
 
 export type TRespPrimitive =
   | string
@@ -63,5 +64,5 @@ export interface ICommandContext {
   subscribedChannels?: string[];
   isSubscribeMode?: boolean;
   setIsSubscribeMode?: (value: boolean) => void;
-  zCache?: Map<string, TZSet[]>;
+  zCache?: Map<string, MinHeap>;
 }

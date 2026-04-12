@@ -14,6 +14,7 @@ import RespEncoder from "./encoder/RespEncoder";
 import RespDecoder from "./decoder/RespDecoder";
 import path from "node:path";
 import * as fs from "fs";
+import type { MinHeap } from "./data-structures/MinHeap";
 
 const { values } = parseArgs({
   options: {
@@ -149,7 +150,7 @@ class RedisServer {
   public redisPort: number | null = null;
   public server: net.Server;
   public cache = new Map<string, TRespData>();
-  public zCache = new Map<string, TZSet[]>();
+  public zCache = new Map<string, MinHeap>();
   public blocked = new Map<string, Array<TBlocked>>();
   public replicationId: string | null = null;
   public replicationOffset: number | null = null;

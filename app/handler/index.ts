@@ -11,6 +11,7 @@ import {
   wakeBlockedListClients,
   wakeBlockedStreamsClients,
 } from "../utils";
+import { MinHeap } from "../data-structures/MinHeap";
 
 export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
@@ -895,35 +896,36 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       throw new Error("wrong number of arguments for 'zadd'");
     }
     const key = args[0] as string;
-    const score = args[1] as string;
+    const score = Number(args[1]);
     const value = args[2] as string;
-    let alreadyExists = false;
-    if (zCache) {
-      let zCVal = zCache.get(key);
-      if (zCVal) {
-        for (let i = 0; i < zCVal.length; i++) {
-          if (zCVal[i].value === value) {
-            alreadyExists = true;
-            break;
-          }
-        }
-        if (!alreadyExists) {
-          zCVal.push({
-            value,
-            score: Number(score),
-          });
-        }
-      } else {
-        zCVal = [];
-        zCVal.push({
-          value,
-          score: Number(score),
-        });
-      }
-      zCache.set(key, zCVal);
-      return alreadyExists ? 0 : 1;
+    if (!zCache) throw new Error("unsupported zadd section");
+    let heap = zCache.get(key);
+    if (!heap) {
+      heap = new MinHeap();
+      zCache.set(key, heap);
     }
-    throw new Error("unsupported zadd section");
+    const existingIndex = heap.findByValue(value);
+    if (existingIndex !== -1) {
+      heap.updateScore(existingIndex, score);
+      return 0;
+    } else {
+      heap.insert({ value, score });
+      return 1;
+    }
+  },
+
+  ZRANK: (args, { zCache }) => {
+    if (args.length !== 2) {
+      throw new Error("wrong number of arguments for 'zrank'");
+    }
+    const key = args[0] as string;
+    const value = args[1] as string;
+    if (!zCache) throw new Error("unsupported zrank section");
+    const heap = zCache.get(key);
+    if (!heap || heap.size() === 0) return null;
+    const sorted = heap.toSortedArray();
+    const rank = sorted.findIndex((item) => item.value === value);
+    return rank === -1 ? null : rank;
   },
 };
 
