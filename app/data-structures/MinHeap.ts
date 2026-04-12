@@ -61,4 +61,13 @@ export class MinHeap {
   getScore(index: number): number {
     return this.heap[index].score;
   }
+  remove(index: number): void {
+    const last = this.heap.length - 1;
+    this.swap(index, last);
+    this.heap.pop();
+    if (index < this.heap.length) {
+      this.bubbleUp(index);
+      this.bubbleDown(index);
+    }
+  }
 }

@@ -975,6 +975,21 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     const index = heap.findByValue(value);
     return index === -1 ? null : String(heap.getScore(index));
   },
+
+  ZREM: (args, { zCache }) => {
+    if (args.length !== 2) {
+      throw new Error("wrong number of arguments for 'zrem'");
+    }
+    const key = args[0] as string;
+    const value = args[1] as string;
+    if (!zCache) throw new Error("unsupported zrem section");
+    const heap = zCache.get(key);
+    if (!heap || heap.size() === 0) return 0;
+    const index = heap.findByValue(value);
+    if (index === -1) return 0;
+    heap.remove(index);
+    return 1;
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
