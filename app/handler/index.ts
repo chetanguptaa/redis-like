@@ -1245,6 +1245,14 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       "invalid username-password pair or user is disabled.",
     );
   },
+
+  WATCH: async (args) => {
+    if (args.length < 1) {
+      throw new Error("wrong number of arguments for 'watch'");
+    }
+    const key = args[0];
+    return simpleString("OK");
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
