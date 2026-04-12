@@ -46,7 +46,11 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
       `-ERR Can't execute '${commandRaw}': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n`,
     );
   }
-  if (!ctx.isAuthenticated && commandRaw.toUpperCase() !== "AUTH") {
+  if (
+    !ctx.myMaster &&
+    !ctx.isAuthenticated &&
+    commandRaw.toUpperCase() !== "AUTH"
+  ) {
     return ctx.socket.write("-NOAUTH Authentication required.\r\n");
   }
   try {
