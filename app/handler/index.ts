@@ -790,7 +790,15 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("unsupported keys section");
   },
 
-  SUBSCRIBE: (args, { subscribedChannels, setIsSubscribeMode }) => {
+  SUBSCRIBE: (
+    args,
+    {
+      subscribedChannels,
+      setIsSubscribeMode,
+      channelsToSubscribersMap,
+      socket,
+    },
+  ) => {
     if (args.length !== 1) {
       throw new Error("wrong number of arguments for 'subscribe'");
     }
@@ -798,13 +806,50 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (
       typeof channel === "string" &&
       subscribedChannels &&
-      setIsSubscribeMode
+      setIsSubscribeMode &&
+      channelsToSubscribersMap
     ) {
       setIsSubscribeMode(true);
       if (!subscribedChannels.includes(channel)) {
         subscribedChannels.push(channel);
       }
+      if (channelsToSubscribersMap.has(channel)) {
+        const subscribers = channelsToSubscribersMap.get(channel);
+        if (subscribers) {
+          if (!subscribers.includes(socket)) {
+            subscribers.push(socket);
+            channelsToSubscribersMap.set(channel, subscribers);
+          }
+        }
+      } else {
+        channelsToSubscribersMap.set(channel, [socket]);
+      }
       return ["subscribe", channel, subscribedChannels.length];
+    }
+    throw new Error("unsupported subscribe section");
+  },
+
+  PUBLISH: (args, { subscribedChannels, channelsToSubscribersMap, socket }) => {
+    if (args.length !== 2) {
+      throw new Error("wrong number of arguments for 'publish'");
+    }
+    const channel = args[0];
+    const content = args[1];
+    if (
+      typeof channel === "string" &&
+      subscribedChannels &&
+      channelsToSubscribersMap
+    ) {
+      if (channelsToSubscribersMap.has(channel)) {
+        const subscribers = channelsToSubscribersMap.get(channel);
+        if (subscribers) {
+          const publishedContent = RespEncoder.encode(content);
+          for (const subscriberSocket of subscribers.values()) {
+            subscriberSocket.write(publishedContent);
+          }
+        }
+      }
+      return channelsToSubscribersMap.size;
     }
     throw new Error("unsupported subscribe section");
   },

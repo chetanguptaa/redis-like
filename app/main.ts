@@ -157,6 +157,7 @@ class RedisServer {
   public mySlaves = new Map<string, net.Socket>();
   public dir: string | null = null;
   public dbFileName: string | null = null;
+  public channelsToSubscribersMap = new Map<string, net.Socket[]>();
 
   constructor(
     private port: number = 6379,
@@ -303,6 +304,7 @@ class RedisServer {
           dbFileName: this.dbFileName,
           subscribedChannels,
           isSubscribeMode,
+          channelsToSubscribersMap: this.channelsToSubscribersMap,
           setIsSubscribeMode: (value: boolean) => {
             isSubscribeMode = value;
           },

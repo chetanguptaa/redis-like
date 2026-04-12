@@ -44,6 +44,7 @@ export interface ICommandContext {
   setIsMulti?: (value: boolean) => void;
   cmdQueue?: TCMDQueueElem[];
   mySlaves?: Map<string, net.Socket>;
+  channelsToSubscribersMap?: Map<string, net.Socket[]>;
   replicationId?: string | null;
   replicationOffset?: number | null;
   myMaster?: string | null;
