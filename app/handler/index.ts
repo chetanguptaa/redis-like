@@ -769,29 +769,24 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("unsupported CONFIG section");
   },
 
-  KEYS: async (args, { dir, dbFileName }) => {
+  KEYS: async (args, { cache }) => {
     if (args.length !== 1) {
       throw new Error("wrong number of arguments for 'keys'");
     }
-    if (!dir || !dbFileName) return [];
-    const filePath = path.join(dir, dbFileName);
-    if (fs.existsSync(filePath)) {
-      const dbRaw = fs.readFileSync(filePath);
-      const dbStr = dbRaw.toString("hex");
-      const dbKeys = dbStr.slice(dbStr.indexOf("fe"));
-      const dbKeyVal = dbKeys.slice(
-        dbKeys.indexOf("fb") + 8,
-        dbKeys.indexOf("ff"),
+    const pattern = args[0];
+    if (typeof pattern === "string") {
+      if (pattern === "*") return [...cache.keys()];
+      const regex = new RegExp(
+        "^" +
+          pattern
+            .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+            .replace(/\*/g, ".*")
+            .replace(/\?/g, ".") +
+          "$",
       );
-      const dbKeyLen = parseInt(dbKeyVal.slice(0, 2), 16);
-      const key = Buffer.from(
-        dbKeyVal.slice(2, dbKeyLen * 2 + 2),
-        "hex",
-      ).toString();
-      return [key];
-    } else {
-      return [];
+      return [...cache.keys()].filter((key) => regex.test(key));
     }
+    throw new Error("unsupported keys section");
   },
 };
 

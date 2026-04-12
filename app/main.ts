@@ -171,24 +171,86 @@ class RedisServer {
     if (dir !== null && dbFileName !== null) {
       const filePath = path.join(dir, dbFileName);
       if (fs.existsSync(filePath)) {
-        const dbRaw = fs.readFileSync(filePath);
-        const dbStr = dbRaw.toString("hex");
-        const dbStart = dbStr.indexOf("fe");
-        const dbEnd = dbStr.indexOf("ff");
-        if (dbStart !== -1 && dbEnd !== -1) {
-          let cursor = dbStr.indexOf("fb", dbStart) + 2;
-          while (cursor < dbEnd) {
-            const keyLen = parseInt(dbStr.slice(cursor, cursor + 2), 16);
-            cursor += 2;
-            const keyHex = dbStr.slice(cursor, cursor + keyLen * 2);
-            const key = Buffer.from(keyHex, "hex").toString();
-            cursor += keyLen * 2;
-            const valLen = parseInt(dbStr.slice(cursor, cursor + 2), 16);
-            cursor += 2;
-            const valHex = dbStr.slice(cursor, cursor + valLen * 2);
-            const value = Buffer.from(valHex, "hex").toString();
-            cursor += valLen * 2;
+        const db = fs.readFileSync(filePath);
+        let cursor = 0;
+
+        // Helper: read a length-encoded integer, returns [value, newCursor]
+        const readLength = (pos: number): [number, number] => {
+          const first = db[pos];
+          const type = (first & 0xc0) >> 6;
+          if (type === 0) return [first & 0x3f, pos + 1]; // 6-bit length
+          if (type === 1) return [((first & 0x3f) << 8) | db[pos + 1], pos + 2]; // 14-bit
+          if (type === 2) return [db.readUInt32BE(pos + 1), pos + 5]; // 32-bit
+          // type === 3: special encoding — return encoding kind, caller handles it
+          return [-(first & 0x3f), pos + 1];
+        };
+
+        // Helper: read a length-prefixed string
+        const readString = (pos: number): [string, number] => {
+          const [len, next] = readLength(pos);
+          if (len === 0) return [db.slice(next, next + len).toString(), next]; // empty
+          if (len < 0) {
+            // Special integer encodings: 0=int8, 1=int16, 2=int32
+            if (len === -0)
+              return [db.slice(next, next + 1).toString(), next + 1];
+            if (len === -1) return [String(db.readInt8(next)), next + 1];
+            if (len === -2) return [String(db.readInt16LE(next)), next + 2];
+            if (len === -3) return [String(db.readInt32LE(next)), next + 4];
+            return ["", next];
+          }
+          return [db.slice(next, next + len).toString(), next + len];
+        };
+
+        // Skip to the DB selector (0xFE)
+        while (cursor < db.length && db[cursor] !== 0xfe) cursor++;
+        if (cursor >= db.length) return;
+
+        cursor++; // skip 0xFE
+        cursor++; // skip db index byte
+
+        // Expect 0xFB (resize db)
+        if (db[cursor] === 0xfb) {
+          cursor++;
+          [, cursor] = readLength(cursor); // hash table size
+          [, cursor] = readLength(cursor); // expiry hash table size
+        }
+
+        // Read key-value pairs until 0xFF (EOF) or next 0xFE (next DB)
+        while (
+          cursor < db.length &&
+          db[cursor] !== 0xff &&
+          db[cursor] !== 0xfe
+        ) {
+          let expiryMs: number | null = null;
+
+          // Check for expiry
+          if (db[cursor] === 0xfc) {
+            // Expiry in milliseconds (8 bytes, little-endian)
+            cursor++;
+            expiryMs = Number(db.readBigUInt64LE(cursor));
+            cursor += 8;
+          } else if (db[cursor] === 0xfd) {
+            // Expiry in seconds (4 bytes, little-endian)
+            cursor++;
+            expiryMs = db.readUInt32LE(cursor) * 1000;
+            cursor += 4;
+          }
+
+          const valueType = db[cursor]; // 0x00 = string, others = list/set/etc.
+          cursor++;
+
+          const [key, afterKey] = readString(cursor);
+          cursor = afterKey;
+          const [value, afterVal] = readString(cursor);
+          cursor = afterVal;
+
+          // Skip already-expired keys
+          if (expiryMs !== null && expiryMs < Date.now()) continue;
+
+          // Only handle string type (0x00) for now
+          if (valueType === 0x00) {
             this.cache.set(key, value as TRespData);
+            // Optionally store expiry: you'd need an expiry map for this
           }
         }
       }
