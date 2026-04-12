@@ -157,7 +157,6 @@ class RedisServer {
   public mySlaves = new Map<string, net.Socket>();
   public dir: string | null = null;
   public dbFileName: string | null = null;
-  public subscribedChannels: string[] = [];
 
   constructor(
     private port: number = 6379,
@@ -277,6 +276,7 @@ class RedisServer {
   private handleConnection(socket: net.Socket) {
     let isMulti = false;
     const cmdQueue: TCMDQueueElem[] = [];
+    const subscribedChannels: string[] = [];
     const parser = new RespParser();
     const self = this;
     socket.on("data", (chunk) => {
@@ -300,7 +300,7 @@ class RedisServer {
           isFromMaster: false,
           dir: this.dir,
           dbFileName: this.dbFileName,
-          subscribedChannels: this.subscribedChannels,
+          subscribedChannels,
 
           get replicationOffset() {
             return self.replicationOffset;
