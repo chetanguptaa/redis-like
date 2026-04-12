@@ -625,7 +625,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       throw new Error("DISCARD without MULTI");
     }
     if (setIsMulti) setIsMulti(false);
-    if (cmdQueue) cmdQueue = [];
+    if (cmdQueue) cmdQueue.length = 0;
     if (watchingKeys && socket) watchingKeys.delete(socket);
     return simpleString("OK");
   },
