@@ -25,3 +25,5 @@ export const SUBSCRIBE_MODE_APPLICABLE_CMDS = [
   "PING",
   "QUIT",
 ];
+
+export const EARTH_RADIUS = 6372797.560856;

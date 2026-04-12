@@ -1,3 +1,4 @@
+import { EARTH_RADIUS } from "../constants";
 import type {
   TCommandHandler,
   TBlocked,
@@ -158,4 +159,27 @@ export const isBigIntString = (val: string): boolean => {
   } catch (e) {
     return false;
   }
+};
+
+export const geohashGetDistance = (
+  lon1d: number,
+  lat1d: number,
+  lon2d: number,
+  lat2d: number,
+): number => {
+  const lon1r = degRad(lon1d);
+  const lon2r = degRad(lon2d);
+  const v = Math.sin((lon2r - lon1r) / 2);
+  if (v === 0.0) return geohashGetLatDistance(lat1d, lat2d);
+  const lat1r = degRad(lat1d);
+  const lat2r = degRad(lat2d);
+  const u = Math.sin((lat2r - lat1r) / 2);
+  const a = u * u + Math.cos(lat1r) * Math.cos(lat2r) * v * v;
+  return 2.0 * EARTH_RADIUS * Math.asin(Math.sqrt(a));
+};
+
+const degRad = (ang: number): number => ang * (Math.PI / 180);
+
+const geohashGetLatDistance = (lat1d: number, lat2d: number): number => {
+  return EARTH_RADIUS * Math.abs(degRad(lat2d) - degRad(lat1d));
 };

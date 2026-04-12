@@ -13,6 +13,7 @@ import type {
 import {
   decodeGeohash,
   encodeGeohash,
+  geohashGetDistance,
   isBigIntString,
   isStrictNumber,
   safeHandler,
@@ -1103,6 +1104,25 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     }
     return response;
+  },
+
+  GEODIST: (args, { geoCache }) => {
+    if (args.length !== 3) {
+      throw new Error("wrong number of arguments for 'geodist'");
+    }
+    if (!geoCache) throw new Error("unsupported geodist section");
+    const key: string = args[0] as string;
+    const place1 = args[1];
+    const place2 = args[2];
+    const heap = geoCache.get(key);
+    if (!heap) return null;
+    const idx1 = heap.findByField("member", place1 as string);
+    const idx2 = heap.findByField("member", place2 as string);
+    if (idx1 === -1 || idx2 === -1) return null;
+    const { lat: lat1, lon: long1 } = heap.get(idx1);
+    const { lat: lat2, lon: long2 } = heap.get(idx2);
+    const distance = geohashGetDistance(long1, lat1, long2, lat2);
+    return distance.toString();
   },
 };
 
