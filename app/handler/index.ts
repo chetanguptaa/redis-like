@@ -795,8 +795,10 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (typeof channel === "string" && subscribedChannels) {
       if (!subscribedChannels.includes(channel)) {
         subscribedChannels.push(channel);
+        return ["subscribe", channel, subscribedChannels.length];
+      } else {
+        return ["subscribe", channel, 1];
       }
-      return ["subscribe", channel, subscribedChannels.length];
     }
     throw new Error("unsupported subscribe section");
   },
