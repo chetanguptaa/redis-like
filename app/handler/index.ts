@@ -897,13 +897,22 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     const key = args[0] as string;
     const score = args[1] as string;
     const value = args[2] as string;
+    let alreadyExists = false;
     if (zCache) {
       let zCVal = zCache.get(key);
       if (zCVal) {
-        zCVal.push({
-          value,
-          score: Number(score),
-        });
+        for (let i = 0; i < zCVal.length; i++) {
+          if (zCVal[i].value === value) {
+            alreadyExists = true;
+            break;
+          }
+        }
+        if (!alreadyExists) {
+          zCVal.push({
+            value,
+            score: Number(score),
+          });
+        }
       } else {
         zCVal = [];
         zCVal.push({
@@ -912,7 +921,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         });
       }
       zCache.set(key, zCVal);
-      return 1;
+      return alreadyExists ? 0 : 1;
     }
     throw new Error("unsupported zadd section");
   },
