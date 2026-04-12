@@ -58,4 +58,7 @@ export class MinHeap {
       return a.value < b.value ? -1 : a.value > b.value ? 1 : 0;
     });
   }
+  getScore(index: number): number {
+    return this.heap[index].score;
+  }
 }
