@@ -1061,7 +1061,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         response.push(null);
       }
     } else {
-      for (const place in places) {
+      for (const place of places) {
         let arr: TRespData = null;
         const idx = heap.findByField("member", place);
         if (idx !== -1) {
