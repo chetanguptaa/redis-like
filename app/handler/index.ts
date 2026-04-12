@@ -6,11 +6,15 @@ import RedisError from "../error";
 import type { TCommandHandler, TRespData } from "../types";
 import {
   isStrictNumber,
+  matchPattern,
   safeHandler,
   simpleString,
   wakeBlockedListClients,
   wakeBlockedStreamsClients,
 } from "../utils";
+import RDBParser from "../rdb-parser/RDBParser";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
@@ -765,6 +769,22 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     }
     throw new Error("unsupported CONFIG section");
+  },
+
+  KEYS: async (args, { dir, dbFileName }) => {
+    if (args.length !== 1) {
+      throw new Error("wrong number of arguments for 'keys'");
+    }
+    if (!dir || !dbFileName) return null;
+    const pattern: string = args[0] as string;
+    const filePath = path.join(dir, dbFileName);
+    const buffer = await readFile(filePath);
+    const rdbParser = new RDBParser(buffer);
+    const data = rdbParser.parse();
+    const keys = Object.keys(data);
+    const matchedKeys =
+      pattern === "*" ? keys : keys.filter((k) => matchPattern(pattern, k));
+    return matchedKeys;
   },
 };
 

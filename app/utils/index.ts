@@ -54,3 +54,20 @@ export const simpleString = (value: string): TSimpleString => ({
   __simple: true,
   value,
 });
+
+/**
+ * Very small glob matcher for Redis KEYS
+ * Supports:
+ *  *  → wildcard
+ *  ?  → single char
+ */
+export const matchPattern = (pattern: string, key: string): boolean => {
+  // Escape regex special chars except * and ?
+  const escaped = pattern.replace(/([.+^${}()|[\]\\])/g, "\\$1");
+
+  const regexPattern =
+    "^" + escaped.replace(/\*/g, ".*").replace(/\?/g, ".") + "$";
+
+  const regex = new RegExp(regexPattern);
+  return regex.test(key);
+};
