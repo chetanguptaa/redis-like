@@ -1164,6 +1164,17 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     return results;
   },
+
+  ACL: (args) => {
+    if (args.length !== 1) {
+      throw new Error("wrong number of arguments for 'acl'");
+    }
+    const arg = args[0];
+    if (typeof arg === "string" && arg === "WHOAMI") {
+      return "default";
+    }
+    throw new Error("Unsupported acl section");
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
