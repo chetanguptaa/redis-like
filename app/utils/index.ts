@@ -167,19 +167,41 @@ export const geohashGetDistance = (
   lon2d: number,
   lat2d: number,
 ): number => {
+  console.log("lon1d, lat1d, lon2d, lat2d", lon1d, lat1d, lon2d, lat2d);
   const lon1r = degRad(lon1d);
   const lon2r = degRad(lon2d);
-  const v = Math.sin((lon2r - lon1r) / 2);
-  if (v === 0.0) return geohashGetLatDistance(lat1d, lat2d);
   const lat1r = degRad(lat1d);
   const lat2r = degRad(lat2d);
   const u = Math.sin((lat2r - lat1r) / 2);
+  const v = Math.sin((lon2r - lon1r) / 2);
   const a = u * u + Math.cos(lat1r) * Math.cos(lat2r) * v * v;
-  return 2.0 * EARTH_RADIUS * Math.asin(Math.sqrt(a));
+  const c = 2.0 * Math.asin(Math.sqrt(a));
+  return EARTH_RADIUS * c;
 };
 
 const degRad = (ang: number): number => ang * (Math.PI / 180);
 
-const geohashGetLatDistance = (lat1d: number, lat2d: number): number => {
-  return EARTH_RADIUS * Math.abs(degRad(lat2d) - degRad(lat1d));
+const radians = (degree: number): number => {
+  return (degree * Math.PI) / 180;
+};
+
+export const haversine = (
+  longitude1: number,
+  latitude1: number,
+  longitude2: number,
+  latitude2: number,
+): number => {
+  const R: number = 6372.797560856; // km
+  const deltaLat: number = radians(latitude2 - latitude1);
+  const deltaLon: number = radians(longitude2 - longitude1);
+  latitude1 = radians(latitude1);
+  latitude2 = radians(latitude2);
+  const a: number =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.sin(deltaLon / 2) *
+      Math.sin(deltaLon / 2) *
+      Math.cos(latitude1) *
+      Math.cos(latitude2);
+  const c: number = 2 * Math.asin(Math.sqrt(a));
+  return R * c * 1000;
 };

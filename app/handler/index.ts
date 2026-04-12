@@ -3,17 +3,12 @@ import { SET_OPTIONS } from "../constants";
 import Stream, { type TEntry } from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
 import RedisError from "../error";
-import type {
-  TCommandHandler,
-  TGeoEntry,
-  TRespData,
-  TSimpleString,
-  TZSet,
-} from "../types";
+import type { TCommandHandler, TGeoEntry, TRespData, TZSet } from "../types";
 import {
   decodeGeohash,
   encodeGeohash,
   geohashGetDistance,
+  haversine,
   isBigIntString,
   isStrictNumber,
   safeHandler,
@@ -1119,8 +1114,10 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     const idx1 = heap.findByField("member", place1 as string);
     const idx2 = heap.findByField("member", place2 as string);
     if (idx1 === -1 || idx2 === -1) return null;
-    const { lat: lat1, lon: long1 } = heap.get(idx1);
-    const { lat: lat2, lon: long2 } = heap.get(idx2);
+    const { score: score1 } = heap.get(idx1);
+    const { score: score2 } = heap.get(idx2);
+    const { latitude: lat1, longitude: long1 } = decodeGeohash(score1);
+    const { latitude: lat2, longitude: long2 } = decodeGeohash(score2);
     const distance = geohashGetDistance(long1, lat1, long2, lat2);
     return distance.toString();
   },
