@@ -1238,7 +1238,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("Unsupported acl section");
   },
 
-  AUTH: async (args, { users, setIsAuthenticated, setCurrentUser }) => {
+  AUTH: (args, { users, setIsAuthenticated, setCurrentUser }) => {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'auth'");
     }
@@ -1269,7 +1269,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     );
   },
 
-  WATCH: async (args, { socket, watchingKeys, cache, zCache, geoCache }) => {
+  WATCH: (args, { socket, watchingKeys, cache, zCache, geoCache }) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'watch'");
     }
@@ -1284,7 +1284,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return simpleString("OK");
   },
 
-  UNWATCH: async (_args, { socket, watchingKeys }) => {
+  UNWATCH: (_args, { socket, watchingKeys }) => {
     if (!watchingKeys) throw new Error("unsupported unwatch section");
     watchingKeys.delete(socket);
     return simpleString("OK");
