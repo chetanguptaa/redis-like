@@ -849,7 +849,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
           }
         }
       }
-      return channelsToSubscribersMap.size;
+      return channelsToSubscribersMap.get(channel)?.length;
     }
     throw new Error("unsupported subscribe section");
   },
