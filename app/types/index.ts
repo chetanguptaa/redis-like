@@ -54,4 +54,5 @@ export interface ICommandContext {
   masterOffsetBeforeCommand?: number | null;
   dir: string | null;
   dbFileName: string | null;
+  subscribedChannels?: string[];
 }

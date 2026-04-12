@@ -11,8 +11,6 @@ import {
   wakeBlockedListClients,
   wakeBlockedStreamsClients,
 } from "../utils";
-import path from "node:path";
-import * as fs from "fs";
 
 export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
@@ -787,6 +785,18 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       return [...cache.keys()].filter((key) => regex.test(key));
     }
     throw new Error("unsupported keys section");
+  },
+
+  SUBSCRIBE: (args, { subscribedChannels }) => {
+    if (args.length !== 1) {
+      throw new Error("wrong number of arguments for 'subscribe'");
+    }
+    const channel = args[0];
+    if (typeof channel === "string" && subscribedChannels) {
+      subscribedChannels.push(channel);
+      return ["subscribe", channel, subscribedChannels.length];
+    }
+    throw new Error("unsupported subscribe section");
   },
 };
 

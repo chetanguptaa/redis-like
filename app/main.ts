@@ -157,6 +157,7 @@ class RedisServer {
   public mySlaves = new Map<string, net.Socket>();
   public dir: string | null = null;
   public dbFileName: string | null = null;
+  public subscribedChannels: string[] = [];
 
   constructor(
     private port: number = 6379,
@@ -299,6 +300,7 @@ class RedisServer {
           isFromMaster: false,
           dir: this.dir,
           dbFileName: this.dbFileName,
+          subscribedChannels: this.subscribedChannels,
 
           get replicationOffset() {
             return self.replicationOffset;
