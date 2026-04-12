@@ -6,15 +6,13 @@ import RedisError from "../error";
 import type { TCommandHandler, TRespData } from "../types";
 import {
   isStrictNumber,
-  matchPattern,
   safeHandler,
   simpleString,
   wakeBlockedListClients,
   wakeBlockedStreamsClients,
 } from "../utils";
-import RDBParser from "../rdb-parser/RDBParser";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
+import * as fs from "fs";
 
 export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
@@ -775,16 +773,25 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (args.length !== 1) {
       throw new Error("wrong number of arguments for 'keys'");
     }
-    if (!dir || !dbFileName) return null;
-    const pattern: string = args[0] as string;
+    if (!dir || !dbFileName) return [];
     const filePath = path.join(dir, dbFileName);
-    const buffer = await readFile(filePath);
-    const rdbParser = new RDBParser(buffer);
-    const data = rdbParser.parse();
-    const keys = Object.keys(data);
-    const matchedKeys =
-      pattern === "*" ? keys : keys.filter((k) => matchPattern(pattern, k));
-    return matchedKeys;
+    if (fs.existsSync(filePath)) {
+      const dbRaw = fs.readFileSync(filePath);
+      const dbStr = dbRaw.toString("hex");
+      const dbKeys = dbStr.slice(dbStr.indexOf("fe"));
+      const dbKeyVal = dbKeys.slice(
+        dbKeys.indexOf("fb") + 8,
+        dbKeys.indexOf("ff"),
+      );
+      const dbKeyLen = parseInt(dbKeyVal.slice(0, 2), 16);
+      const key = Buffer.from(
+        dbKeyVal.slice(2, dbKeyLen * 2 + 2),
+        "hex",
+      ).toString();
+      return [key];
+    } else {
+      return [];
+    }
   },
 };
 
