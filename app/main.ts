@@ -284,7 +284,7 @@ class RedisServer {
   private handleConnection(socket: net.Socket) {
     let isMulti = false;
     let currentUser = "default";
-    let isAuthenticated = false;
+    let isAuthenticated = this.users.get(currentUser)?.length ? false : true;
     const cmdQueue: TCMDQueueElem[] = [];
     const subscribedChannels: string[] = [];
     let isSubscribeMode: boolean = false;
