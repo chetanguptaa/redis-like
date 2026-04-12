@@ -167,7 +167,6 @@ export const geohashGetDistance = (
   lon2d: number,
   lat2d: number,
 ): number => {
-  console.log("lon1d, lat1d, lon2d, lat2d", lon1d, lat1d, lon2d, lat2d);
   const lon1r = degRad(lon1d);
   const lon2r = degRad(lon2d);
   const lat1r = degRad(lat1d);

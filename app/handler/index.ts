@@ -1121,6 +1121,49 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     const distance = geohashGetDistance(long1, lat1, long2, lat2);
     return distance.toString();
   },
+
+  GEOSEARCH: (args, { geoCache }) => {
+    if (args.length < 6) {
+      throw new Error("wrong number of arguments for 'geosearch'");
+    }
+    if (!geoCache) throw new Error("unsupported geosearch section");
+    const key = args[0] as string;
+    const heap = geoCache.get(key);
+    if (!heap) return [];
+    let lon: number;
+    let lat: number;
+    let idx = 1;
+    if (args[idx] === "FROMLONLAT") {
+      lon = Number(args[idx + 1]);
+      lat = Number(args[idx + 2]);
+      idx += 3;
+    } else {
+      throw new Error("unsupported GEOSEARCH option");
+    }
+    let radius: number;
+    if (args[idx] === "BYRADIUS") {
+      radius = Number(args[idx + 1]);
+      const unit = args[idx + 2] as string;
+      if (unit === "km") radius *= 1000;
+      else if (unit === "mi") radius *= 1609.344;
+      else if (unit === "ft") radius *= 0.3048;
+      idx += 3;
+    } else {
+      throw new Error("unsupported GEOSEARCH option");
+    }
+    const results: string[] = [];
+    for (let i = 0; i < heap.size(); i++) {
+      const entry = heap.get(i) as TGeoEntry;
+      const { latitude: memberLat, longitude: memberLon } = decodeGeohash(
+        entry.score,
+      );
+      const distance = geohashGetDistance(lon, lat, memberLon, memberLat);
+      if (distance <= radius) {
+        results.push(entry.member);
+      }
+    }
+    return results;
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
