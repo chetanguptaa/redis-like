@@ -1,4 +1,4 @@
-export class MinHeap<T extends { score: number }> {
+export class MinHeap<T extends { score: number | bigint }> {
   private heap: T[] = [];
 
   private parent(i: number) {
@@ -39,7 +39,7 @@ export class MinHeap<T extends { score: number }> {
     this.heap.push(item);
     this.bubbleUp(this.heap.length - 1);
   }
-  updateScore(index: number, newScore: number): void {
+  updateScore(index: number, newScore: number | bigint): void {
     const oldScore = this.heap[index].score;
     this.heap[index].score = newScore;
     if (newScore < oldScore) this.bubbleUp(index);
@@ -54,7 +54,7 @@ export class MinHeap<T extends { score: number }> {
       this.bubbleDown(index);
     }
   }
-  getScore(index: number): number {
+  getScore(index: number): number | bigint {
     return this.heap[index].score;
   }
   get(index: number): T {
@@ -67,7 +67,7 @@ export class MinHeap<T extends { score: number }> {
     return this.heap.length;
   }
   toSortedArray(): T[] {
-    return [...this.heap].sort((a, b) => {
+    return [...this.heap].sort((a: any, b: any) => {
       if (a.score !== b.score) return a.score - b.score;
       const aKey = (a as any).value ?? (a as any).member ?? "";
       const bKey = (b as any).value ?? (b as any).member ?? "";

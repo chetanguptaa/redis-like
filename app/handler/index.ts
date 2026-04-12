@@ -975,6 +975,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (!heap) return 0;
     return heap.size();
   },
+
   ZSCORE: (args, { zCache, geoCache }) => {
     if (args.length !== 2) {
       throw new Error("wrong number of arguments for 'zscore'");

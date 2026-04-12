@@ -30,7 +30,7 @@ export type TGeoEntry = {
   member: string;
   lat: number;
   lon: number;
-  score: number;
+  score: bigint;
 };
 
 export type TBlocked = {
