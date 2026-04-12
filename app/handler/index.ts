@@ -848,8 +848,8 @@ export const rawHandlers: Record<string, TCommandHandler> = {
             subscriberSocket.write(publishedContent);
           }
         }
+        return channelsToSubscribersMap.get(channel)?.length;
       }
-      return channelsToSubscribersMap.get(channel)?.length;
     }
     throw new Error("unsupported subscribe section");
   },
