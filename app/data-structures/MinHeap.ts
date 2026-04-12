@@ -53,6 +53,9 @@ export class MinHeap {
     return this.heap.length;
   }
   toSortedArray(): TZSet[] {
-    return [...this.heap].sort((a, b) => a.score - b.score);
+    return [...this.heap].sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score;
+      return a.value < b.value ? -1 : a.value > b.value ? 1 : 0;
+    });
   }
 }
