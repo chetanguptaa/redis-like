@@ -927,6 +927,30 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     const rank = sorted.findIndex((item) => item.value === value);
     return rank === -1 ? null : rank;
   },
+
+  ZRANGE: (args, { zCache }) => {
+    if (args.length < 3) {
+      throw new Error("wrong number of arguments for 'zrange'");
+    }
+    const key = args[0] as string;
+    let start = Number(args[1]);
+    let stop = Number(args[2]);
+    const withScores = args[4]?.toString().toUpperCase() === "WITHSCORES";
+    if (!zCache) throw new Error("unsupported zrange section");
+    const heap = zCache.get(key);
+    if (!heap || heap.size() === 0) return [];
+    const sorted = heap.toSortedArray();
+    const len = sorted.length;
+    if (start < 0) start = Math.max(0, len + start);
+    if (stop < 0) stop = len + stop;
+    if (start > stop || start >= len) return [];
+    stop = Math.min(stop, len - 1);
+    const slice = sorted.slice(start, stop + 1);
+    if (withScores) {
+      return slice.flatMap((item) => [item.value, String(item.score)]);
+    }
+    return slice.map((item) => item.value);
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
