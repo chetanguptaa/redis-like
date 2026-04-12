@@ -7,6 +7,7 @@ import type {
   TCMDQueueElem,
   TRespData,
   TStage,
+  TZSet,
 } from "./types";
 import { executeCommand } from "./cmd-exectutor";
 import RespEncoder from "./encoder/RespEncoder";
@@ -148,6 +149,7 @@ class RedisServer {
   public redisPort: number | null = null;
   public server: net.Server;
   public cache = new Map<string, TRespData>();
+  public zCache = new Map<string, TZSet[]>();
   public blocked = new Map<string, Array<TBlocked>>();
   public replicationId: string | null = null;
   public replicationOffset: number | null = null;
@@ -305,6 +307,7 @@ class RedisServer {
           subscribedChannels,
           isSubscribeMode,
           channelsToSubscribersMap: this.channelsToSubscribersMap,
+          zCache: this.zCache,
           setIsSubscribeMode: (value: boolean) => {
             isSubscribeMode = value;
           },

@@ -20,6 +20,11 @@ export type TCommandHandler = (args: TRespData[], ctx: ICommandContext) => void;
 
 export type TSimpleString = { __simple: true; value: string };
 
+export type TZSet = {
+  value: string;
+  score: number;
+};
+
 export type TBlocked = {
   socket: net.Socket;
   unblock: (key?: string, element?: TRespData) => void;
@@ -58,4 +63,5 @@ export interface ICommandContext {
   subscribedChannels?: string[];
   isSubscribeMode?: boolean;
   setIsSubscribeMode?: (value: boolean) => void;
+  zCache?: Map<string, TZSet[]>;
 }

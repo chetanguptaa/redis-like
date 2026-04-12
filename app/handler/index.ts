@@ -3,7 +3,7 @@ import { SET_OPTIONS } from "../constants";
 import Stream, { type TEntry } from "../data-structures/Stream";
 import RespEncoder from "../encoder/RespEncoder";
 import RedisError from "../error";
-import type { TCommandHandler, TRespData } from "../types";
+import type { TCommandHandler, TRespData, TSimpleString } from "../types";
 import {
   isStrictNumber,
   safeHandler,
@@ -11,7 +11,6 @@ import {
   wakeBlockedListClients,
   wakeBlockedStreamsClients,
 } from "../utils";
-import { Socket } from "node:dgram";
 
 export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
@@ -889,6 +888,33 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       return ["unsubscribe", channel, subscribedChannels.length];
     }
     throw new Error("unsupported unsubscribe section");
+  },
+
+  ZADD: (args, { zCache }) => {
+    if (args.length !== 3) {
+      throw new Error("wrong number of arguments for 'zadd'");
+    }
+    const key = args[0] as string;
+    const score = args[1] as string;
+    const value = args[2] as string;
+    if (zCache) {
+      let zCVal = zCache.get(key);
+      if (zCVal) {
+        zCVal.push({
+          value,
+          score: Number(score),
+        });
+      } else {
+        zCVal = [];
+        zCVal.push({
+          value,
+          score: Number(score),
+        });
+      }
+      zCache.set(key, zCVal);
+      return 1;
+    }
+    throw new Error("unsupported zadd section");
   },
 };
 
