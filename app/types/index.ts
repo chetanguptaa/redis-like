@@ -74,5 +74,5 @@ export interface ICommandContext {
   setIsSubscribeMode?: (value: boolean) => void;
   zCache?: Map<string, MinHeap<TZSet>>;
   geoCache?: Map<string, MinHeap<TGeoEntry>>;
-  users?: Map<string, string | null>; // user -> password mapping
+  users?: Map<string, string[]>; // user -> passwords mapping
 }

@@ -16,6 +16,7 @@ import {
   wakeBlockedStreamsClients,
 } from "../utils";
 import { MinHeap } from "../data-structures/MinHeap";
+import { createHash } from "node:crypto";
 
 export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
@@ -1177,13 +1178,13 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         const username = args[1] as string;
         if (!users) throw new Error("unsupported acl section");
         if (!users.has(username)) return null;
-        const password = users.get(username);
+        const userPasswords = users.get(username);
         const flags = [];
         const passwords = [];
-        if (!password) {
+        if (!userPasswords?.length) {
           flags.push("nopass");
         } else {
-          passwords.push(password);
+          passwords.push(...userPasswords);
         }
         return ["flags", flags, "passwords", passwords];
       }
@@ -1200,18 +1201,43 @@ export const rawHandlers: Record<string, TCommandHandler> = {
           const hashHex = hashArray
             .map((b) => b.toString(16).padStart(2, "0"))
             .join("");
-          users.set(username, hashHex);
+          users.set(username, [...(users.get(username) || []), hashHex]);
           return simpleString("OK");
         }
         if (value === "nopass" || value === "on" || value === "off") {
           if (!users.has(username)) {
-            users.set(username, null);
+            users.set(username, []);
           }
           return simpleString("OK");
         }
       }
     }
     throw new Error("Unsupported acl section");
+  },
+
+  AUTH: async (args, { users }) => {
+    if (args.length < 2) {
+      throw new Error("wrong number of arguments for 'auth'");
+    }
+    if (!users) throw new Error("unsupported auth section");
+    const username = args[0] as string;
+    const password = args[1] as string;
+    const storedPasswords = users.get(username);
+    if (!storedPasswords?.length) {
+      throw new RedisError(
+        "WRONGPASS",
+        "invalid username-password pair or user is disabled.",
+      );
+    }
+    const hashHex = createHash("sha256").update(password).digest("hex");
+    for (let i = 0; i < storedPasswords.length; i++) {
+      const password = storedPasswords[i];
+      if (hashHex === password) return simpleString("OK");
+    }
+    throw new RedisError(
+      "WRONGPASS",
+      "invalid username-password pair or user is disabled.",
+    );
   },
 };
 
