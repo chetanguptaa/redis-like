@@ -624,6 +624,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       }
     }
     if (ctx.dirtyKeys) ctx.dirtyKeys.clear();
+    ctx.watchingKeys?.delete(ctx.socket);
     return output;
   },
 
