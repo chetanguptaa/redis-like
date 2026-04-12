@@ -926,7 +926,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         return 0;
       } else {
         const { latitude, longitude } = decodeGeohash(score);
-        heap.insert({ member: value, lat: latitude, lon: longitude, score });
+        heap.insert({ member: value, lat: longitude, lon: latitude, score });
         return 1;
       }
     }
