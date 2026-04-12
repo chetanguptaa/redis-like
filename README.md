@@ -45,6 +45,9 @@ The system is designed as a **single-threaded event-driven server**, similar to 
 
 ### Replication
 - Read replicas with async synchronization
+- Improves write throughput by avoiding replica acknowledgment on the critical path
+- Results in eventual consistency and potential data loss during failures
+- Support for synchronous replication via WAIT command
 
 ### Protocol
 - Full RESP protocol support for compatibility with Redis clients
@@ -70,6 +73,12 @@ Benchmarked using `redis-benchmark` on a local machine.
 |----------------|----------------------|
 | 16             | ~325k – 361k         |
 | 32             | ~370k – 408k         |
+
+### Environment
+
+- Runtime: Bun.js (JavaScript runtime)
+- Machine: MacBook (M-series)
+- Tool: redis-benchmark
 
 ---
 
