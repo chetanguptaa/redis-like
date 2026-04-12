@@ -975,17 +975,23 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (!heap) return 0;
     return heap.size();
   },
-
-  ZSCORE: (args, { zCache }) => {
+  ZSCORE: (args, { zCache, geoCache }) => {
     if (args.length !== 2) {
       throw new Error("wrong number of arguments for 'zscore'");
     }
     const key = args[0] as string;
     const value = args[1] as string;
-    if (!zCache) throw new Error("unsupported zscore section");
-    const heap = zCache.get(key);
+    if (!zCache && !geoCache) throw new Error("unsupported zscore section");
+    let index = -1;
+    let heap: MinHeap<TZSet> | MinHeap<TGeoEntry> | undefined =
+      zCache?.get(key);
+    if (heap) {
+      index = heap.findByField("value", value);
+    } else if (geoCache) {
+      heap = geoCache.get(key);
+      if (heap) index = heap.findByField("member", value);
+    }
     if (!heap || heap.size() === 0) return null;
-    const index = heap.findByField("value", value);
     return index === -1 ? null : String(heap.getScore(index));
   },
 
