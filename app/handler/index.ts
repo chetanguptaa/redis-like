@@ -1215,7 +1215,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("Unsupported acl section");
   },
 
-  AUTH: async (args, { users }) => {
+  AUTH: async (args, { users, setIsAuthenticated, setCurrentUser }) => {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'auth'");
     }
@@ -1223,7 +1223,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     const username = args[0] as string;
     const password = args[1] as string;
     const storedPasswords = users.get(username);
-    if (!storedPasswords?.length) {
+    if (!storedPasswords || storedPasswords.length === 0) {
       throw new RedisError(
         "WRONGPASS",
         "invalid username-password pair or user is disabled.",
@@ -1231,8 +1231,14 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     const hashHex = createHash("sha256").update(password).digest("hex");
     for (let i = 0; i < storedPasswords.length; i++) {
-      const password = storedPasswords[i];
-      if (hashHex === password) return simpleString("OK");
+      const storedHash = storedPasswords[i];
+      if (hashHex === storedHash) {
+        if (setCurrentUser && setIsAuthenticated) {
+          setCurrentUser(username);
+          setIsAuthenticated(true);
+        }
+        return simpleString("OK");
+      }
     }
     throw new RedisError(
       "WRONGPASS",

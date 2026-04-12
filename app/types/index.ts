@@ -75,4 +75,8 @@ export interface ICommandContext {
   zCache?: Map<string, MinHeap<TZSet>>;
   geoCache?: Map<string, MinHeap<TGeoEntry>>;
   users?: Map<string, string[]>; // user -> passwords mapping
+  currentUser?: string;
+  isAuthenticated?: boolean;
+  setIsAuthenticated?: (value: boolean) => void;
+  setCurrentUser?: (value: string) => void;
 }

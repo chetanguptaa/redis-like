@@ -283,6 +283,8 @@ class RedisServer {
 
   private handleConnection(socket: net.Socket) {
     let isMulti = false;
+    let currentUser = "default";
+    let isAuthenticated = false;
     const cmdQueue: TCMDQueueElem[] = [];
     const subscribedChannels: string[] = [];
     let isSubscribeMode: boolean = false;
@@ -315,8 +317,16 @@ class RedisServer {
           zCache: this.zCache,
           geoCache: this.geoCache,
           users: this.users,
+          currentUser,
+          isAuthenticated,
           setIsSubscribeMode: (value: boolean) => {
             isSubscribeMode = value;
+          },
+          setIsAuthenticated: (value: boolean) => {
+            isAuthenticated = value;
+          },
+          setCurrentUser: (value: string) => {
+            currentUser = value;
           },
 
           get replicationOffset() {
