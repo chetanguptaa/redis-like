@@ -1058,7 +1058,9 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     const heap = geoCache.get(key);
     if (!heap) {
       for (let i = 0; i < places.length; i++) {
-        response.push(null);
+        response.push({
+          type: "null-array",
+        });
       }
     } else {
       for (const place of places) {
