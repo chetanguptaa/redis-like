@@ -1046,6 +1046,36 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     return added;
   },
+
+  GEOPOS: (args, { geoCache }) => {
+    if (args.length < 2) {
+      throw new Error("wrong number of arguments for 'geopos'");
+    }
+    if (!geoCache) throw new Error("unsupported geopos section");
+    const key: string = args[0] as string;
+    const places = args.slice(1);
+    const response: TRespData = [];
+    const heap = geoCache.get(key);
+    if (!heap) {
+      for (let i = 0; i < places.length; i++) {
+        response.push(null);
+      }
+    } else {
+      for (const place in places) {
+        const arr: TRespData = [];
+        const idx = heap.findByField("member", place);
+        if (idx === -1) {
+          arr.push(null);
+        } else {
+          const { lat, lon } = heap.get(idx);
+          arr.push(lat.toString());
+          arr.push(lon.toString());
+        }
+        response.push(arr);
+      }
+    }
+    return response;
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
