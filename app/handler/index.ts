@@ -951,6 +951,17 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     return slice.map((item) => item.value);
   },
+
+  ZCARD: (args, { zCache }) => {
+    if (args.length !== 1) {
+      throw new Error("wrong number of arguments for 'zcard'");
+    }
+    const key = args[0] as string;
+    if (!zCache) throw new Error("unsupported zcard section");
+    const heap = zCache.get(key);
+    if (!heap) return 0;
+    return heap.size();
+  },
 };
 
 export const handlers: Record<string, TCommandHandler> = Object.fromEntries(
