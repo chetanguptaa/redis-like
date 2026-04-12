@@ -143,8 +143,8 @@ function decodeConvertGridNumbersToCoordinates(
 export const decodeGeohash = (geoCode: bigint): DecodeCoordinates => {
   const y = geoCode >> 1n;
   const x = geoCode;
-  const gridLatitudeNumber = decodeCompactInt64ToInt32(y);
-  const gridLongitudeNumber = decodeCompactInt64ToInt32(x);
+  const gridLatitudeNumber = decodeCompactInt64ToInt32(x);
+  const gridLongitudeNumber = decodeCompactInt64ToInt32(y);
   return decodeConvertGridNumbersToCoordinates(
     gridLatitudeNumber,
     gridLongitudeNumber,
