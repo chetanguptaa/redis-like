@@ -79,4 +79,6 @@ export interface ICommandContext {
   isAuthenticated?: boolean;
   setIsAuthenticated?: (value: boolean) => void;
   setCurrentUser?: (value: string) => void;
+  watchingKeys?: Map<net.Socket, string[]>;
+  dirtyKeys?: Set<string>;
 }

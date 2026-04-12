@@ -33,7 +33,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return simpleString("PONG");
   },
 
-  SET: (args, { cache }) => {
+  SET: (args, { cache, dirtyKeys }) => {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'set'");
     }
@@ -52,6 +52,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         ttl = Number(ttlRaw);
       }
     }
+    dirtyKeys?.add(key);
     cache.set(key, value);
     if (ttl) {
       setTimeout(() => cache.delete(key), ttl);
@@ -70,7 +71,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return cache.get(key) ?? null;
   },
 
-  RPUSH: (args, { cache, blocked }) => {
+  RPUSH: (args, { cache, blocked, dirtyKeys }) => {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'rpush'");
     }
@@ -90,6 +91,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       value.push(args[i]);
     }
     cache.set(key, value);
+    dirtyKeys?.add(key);
     const output = value.length;
     wakeBlockedListClients(key, cache, blocked);
     return output;
@@ -132,7 +134,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
   },
 
-  LPUSH: (args, { cache, blocked }) => {
+  LPUSH: (args, { cache, blocked, dirtyKeys }) => {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'lpush'");
     }
@@ -152,6 +154,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       value.unshift(args[i]);
     }
     cache.set(key, value);
+    dirtyKeys?.add(key);
     const output = value.length;
     wakeBlockedListClients(key, cache, blocked);
     return output;
@@ -176,7 +179,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return value.length;
   },
 
-  LPOP: (args, { cache }) => {
+  LPOP: (args, { cache, dirtyKeys }) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'llop'");
     }
@@ -195,6 +198,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (value.length === 0) {
       return null;
     }
+    dirtyKeys?.add(key);
     if (args.length === 1) {
       return value.shift() || null;
     }
@@ -218,7 +222,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
   },
 
-  BLPOP: (args, { socket, cache, blocked }) => {
+  BLPOP: (args, { socket, cache, blocked, dirtyKeys }) => {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'blpop'");
     }
@@ -229,6 +233,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     for (const key of keys) {
       if (typeof key === "string") {
+        dirtyKeys?.add(key);
         let value = cache.get(key) ?? null;
         if (value && !Array.isArray(value)) {
           throw new RedisError(
@@ -286,7 +291,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return simpleString("string");
   },
 
-  XADD: (args, { cache, blocked }) => {
+  XADD: (args, { cache, blocked, dirtyKeys }) => {
     if (args.length < 3) {
       throw new Error("wrong number of arguments for 'xadd'");
     }
@@ -294,6 +299,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (typeof key !== "string") {
       throw new Error("invalid key");
     }
+    dirtyKeys?.add(key);
     let value = cache.get(key) ?? null;
     if (!value) {
       value = new Stream();
@@ -547,7 +553,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
   },
 
-  INCR: (args, { cache }) => {
+  INCR: (args, { cache, dirtyKeys }) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'incr'");
     }
@@ -563,6 +569,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (val) {
       newVal = Number(val) + 1;
     }
+    dirtyKeys?.add(key);
     cache.set(key, newVal.toString());
     return newVal;
   },
@@ -587,6 +594,12 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     if (ctx.setIsMulti) {
       ctx.setIsMulti(false);
     }
+    if (ctx.watchingKeys && ctx.socket && ctx.dirtyKeys) {
+      const watched = ctx.watchingKeys.get(ctx.socket) || [];
+      const aborted = watched.some((key) => ctx.dirtyKeys!.has(key));
+      ctx.watchingKeys.delete(ctx.socket);
+      if (aborted) return null;
+    }
     const output: TRespData[] = [];
     if (ctx.cmdQueue) {
       for (const { handler, args } of ctx.cmdQueue) {
@@ -599,23 +612,20 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         }
       }
     }
-
+    if (ctx.dirtyKeys) ctx.dirtyKeys.clear();
     return output;
   },
 
-  DISCARD: (args, { isMulti, setIsMulti, cmdQueue }) => {
+  DISCARD: (args, { isMulti, setIsMulti, cmdQueue, watchingKeys, socket }) => {
     if (args.length > 0) {
-      throw new Error("wrong number of arguments for 'exec'");
+      throw new Error("wrong number of arguments for 'discard'");
     }
     if (!isMulti) {
       throw new Error("DISCARD without MULTI");
     }
-    if (setIsMulti) {
-      setIsMulti(false);
-    }
-    if (cmdQueue) {
-      cmdQueue = [];
-    }
+    if (setIsMulti) setIsMulti(false);
+    if (cmdQueue) cmdQueue = [];
+    if (watchingKeys && socket) watchingKeys.delete(socket);
     return simpleString("OK");
   },
 
@@ -896,11 +906,12 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("unsupported unsubscribe section");
   },
 
-  ZADD: (args, { zCache, geoCache }) => {
+  ZADD: (args, { zCache, geoCache, dirtyKeys }) => {
     if (args.length !== 3) {
       throw new Error("wrong number of arguments for 'zadd'");
     }
     const key = args[0] as string;
+    dirtyKeys?.add(key);
     let score = args[1];
     const value = args[2] as string;
     if ((!zCache && !geoCache) || typeof score !== "string") {
@@ -1032,11 +1043,12 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return 1;
   },
 
-  GEOADD: (args, { geoCache }) => {
+  GEOADD: (args, { geoCache, dirtyKeys }) => {
     if (args.length < 4 || (args.length - 1) % 3 !== 0) {
       throw new Error("wrong number of arguments for 'geoadd'");
     }
     const key = args[0] as string;
+    dirtyKeys?.add(key);
     if (!geoCache) throw new Error("unsupported geoadd section");
     let heap = geoCache.get(key);
     if (!heap) {
@@ -1246,11 +1258,18 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     );
   },
 
-  WATCH: async (args) => {
+  WATCH: async (args, { socket, watchingKeys }) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'watch'");
     }
-    const key = args[0];
+    const key: string = args[0] as string;
+    if (!watchingKeys) throw new Error("unsupported watch section");
+    const keys = watchingKeys.get(socket);
+    if (!keys) {
+      watchingKeys.set(socket, [key]);
+    } else {
+      watchingKeys.set(socket, [...(watchingKeys.get(socket) || []), key]);
+    }
     return simpleString("OK");
   },
 };

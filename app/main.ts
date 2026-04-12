@@ -164,6 +164,8 @@ class RedisServer {
   public channelsToSubscribersMap = new Map<string, net.Socket[]>();
   public geoCache = new Map<string, MinHeap<TGeoEntry>>();
   public users = new Map<string, string[]>();
+  public watchingKeys = new Map<net.Socket, string[]>();
+  public dirtyKeys = new Set<string>();
 
   constructor(
     private port: number = 6379,
@@ -282,6 +284,10 @@ class RedisServer {
   }
 
   private handleConnection(socket: net.Socket) {
+    const isWatchingKeyEntry = this.watchingKeys.has(socket);
+    if (!isWatchingKeyEntry) {
+      this.watchingKeys.set(socket, []);
+    }
     let isMulti = false;
     let currentUser = "default";
     let isAuthenticated = this.users.get(currentUser)?.length ? false : true;
@@ -319,6 +325,8 @@ class RedisServer {
           users: this.users,
           currentUser,
           isAuthenticated,
+          watchingKeys: this.watchingKeys,
+          dirtyKeys: this.dirtyKeys,
           setIsSubscribeMode: (value: boolean) => {
             isSubscribeMode = value;
           },
