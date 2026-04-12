@@ -598,7 +598,11 @@ export const rawHandlers: Record<string, TCommandHandler> = {
       const watched = ctx.watchingKeys.get(ctx.socket) || [];
       const aborted = watched.some((key) => ctx.dirtyKeys!.has(key));
       ctx.watchingKeys.delete(ctx.socket);
-      if (aborted) return null;
+      if (aborted) {
+        return {
+          type: "null-array",
+        };
+      }
     }
     const output: TRespData[] = [];
     if (ctx.cmdQueue) {
