@@ -40,7 +40,7 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   }
   if (
     ctx.isSubscribeMode &&
-    !SUBSCRIBE_MODE_APPLICABLE_CMDS.includes(commandRaw)
+    !SUBSCRIBE_MODE_APPLICABLE_CMDS.includes(commandRaw.toUpperCase())
   ) {
     return ctx.socket.write(
       `-ERR Can't execute '${commandRaw}': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n`,

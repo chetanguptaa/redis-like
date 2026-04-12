@@ -11,6 +11,7 @@ import {
   wakeBlockedListClients,
   wakeBlockedStreamsClients,
 } from "../utils";
+import { Socket } from "node:dgram";
 
 export const rawHandlers: Record<string, TCommandHandler> = {
   ECHO: (args) => {
@@ -854,6 +855,29 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         }
         return channelsToSubscribersMap.get(channel)?.length;
       }
+    }
+    throw new Error("unsupported subscribe section");
+  },
+
+  UNSUBSCRIBE: (
+    args,
+    { subscribedChannels, channelsToSubscribersMap, socket },
+  ) => {
+    if (args.length !== 1) {
+      throw new Error("wrong number of arguments for 'unsubscribe'");
+    }
+    const channel = args[0];
+    if (
+      typeof channel === "string" &&
+      subscribedChannels &&
+      channelsToSubscribersMap
+    ) {
+      subscribedChannels = subscribedChannels.filter((sc) => sc !== channel);
+      let subscribers = channelsToSubscribersMap.get(channel);
+      if (subscribers) {
+        subscribers = subscribers.filter((s) => s !== socket);
+      }
+      return ["unsubscribe", channel, subscribedChannels.length];
     }
     throw new Error("unsupported subscribe section");
   },
