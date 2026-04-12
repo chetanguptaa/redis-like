@@ -1164,7 +1164,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return results;
   },
 
-  ACL: (args) => {
+  ACL: (args, { users }) => {
     if (args.length < 1) {
       throw new Error("wrong number of arguments for 'acl'");
     }
@@ -1174,7 +1174,26 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         return "default";
       }
       if (arg === "GETUSER") {
+        const username = args[1] as string;
+        if (!users) throw new Error("unsupported acl section");
+        if (!users.has(username)) return null;
         return ["flags", ["nopass"], "passwords", []];
+      }
+      if (arg === "SETUSER") {
+        if (!users) throw new Error("unsupported acl section");
+        const username = args[1] as string;
+        const value = args[2] as string;
+        if (value.startsWith(">")) {
+          const password = value.slice(1);
+          users.set(username, password);
+          return "OK";
+        }
+        if (value === "nopass" || value === "on" || value === "off") {
+          if (!users.has(username)) {
+            users.set(username, "");
+          }
+          return "OK";
+        }
       }
     }
     throw new Error("Unsupported acl section");

@@ -163,6 +163,7 @@ class RedisServer {
   public dbFileName: string | null = null;
   public channelsToSubscribersMap = new Map<string, net.Socket[]>();
   public geoCache = new Map<string, MinHeap<TGeoEntry>>();
+  public users = new Map<string, string | null>();
 
   constructor(
     private port: number = 6379,
@@ -268,6 +269,7 @@ class RedisServer {
       this.replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
       this.replicationOffset = 0;
     }
+    this.users.set("default", null);
   }
 
   start() {
@@ -312,6 +314,7 @@ class RedisServer {
           channelsToSubscribersMap: this.channelsToSubscribersMap,
           zCache: this.zCache,
           geoCache: this.geoCache,
+          users: this.users,
           setIsSubscribeMode: (value: boolean) => {
             isSubscribeMode = value;
           },
