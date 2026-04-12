@@ -22,7 +22,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
 
   PING: (_args, { isSubscribeMode }) => {
     if (isSubscribeMode) {
-      return ["PONG", ""];
+      return ["pong", ""];
     }
     return simpleString("PONG");
   },
