@@ -787,12 +787,17 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("unsupported keys section");
   },
 
-  SUBSCRIBE: (args, { subscribedChannels }) => {
+  SUBSCRIBE: (args, { subscribedChannels, setIsSubscribeMode }) => {
     if (args.length !== 1) {
       throw new Error("wrong number of arguments for 'subscribe'");
     }
     const channel = args[0];
-    if (typeof channel === "string" && subscribedChannels) {
+    if (
+      typeof channel === "string" &&
+      subscribedChannels &&
+      setIsSubscribeMode
+    ) {
+      setIsSubscribeMode(true);
       if (!subscribedChannels.includes(channel)) {
         subscribedChannels.push(channel);
       }

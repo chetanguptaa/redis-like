@@ -277,6 +277,7 @@ class RedisServer {
     let isMulti = false;
     const cmdQueue: TCMDQueueElem[] = [];
     const subscribedChannels: string[] = [];
+    let isSubscribeMode: boolean = false;
     const parser = new RespParser();
     const self = this;
     socket.on("data", (chunk) => {
@@ -301,6 +302,10 @@ class RedisServer {
           dir: this.dir,
           dbFileName: this.dbFileName,
           subscribedChannels,
+          isSubscribeMode,
+          setIsSubscribeMode: (value: boolean) => {
+            isSubscribeMode = value;
+          },
 
           get replicationOffset() {
             return self.replicationOffset;

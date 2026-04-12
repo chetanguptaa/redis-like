@@ -55,4 +55,6 @@ export interface ICommandContext {
   dir: string | null;
   dbFileName: string | null;
   subscribedChannels?: string[];
+  isSubscribeMode?: boolean;
+  setIsSubscribeMode?: (value: boolean) => void;
 }

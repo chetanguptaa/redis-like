@@ -16,3 +16,12 @@ export const WRITE_CMDS = [
   "XADD",
   "INCR",
 ];
+
+export const SUBSCRIBE_MODE_APPLICABLE_CMDS = [
+  "SUBSCRIBE",
+  "UNSUBSCRIBE",
+  "PSUBSCRIBE",
+  "PUNSUBSCRIBE",
+  "PING",
+  "QUIT",
+];

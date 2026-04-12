@@ -1,4 +1,4 @@
-import { WRITE_CMDS } from "../constants";
+import { SUBSCRIBE_MODE_APPLICABLE_CMDS, WRITE_CMDS } from "../constants";
 import RespEncoder from "../encoder/RespEncoder";
 import RedisError from "../error";
 import { handlers } from "../handler";
@@ -37,6 +37,14 @@ export async function executeCommand(message: TRespData, ctx: ICommandContext) {
   ) {
     ctx.cmdQueue?.push({ handler, args });
     return ctx.socket.write("+QUEUED\r\n");
+  }
+  if (
+    ctx.isSubscribeMode &&
+    !SUBSCRIBE_MODE_APPLICABLE_CMDS.includes(commandRaw)
+  ) {
+    return ctx.socket.write(
+      `-ERR Can't execute '${commandRaw}': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n`,
+    );
   }
   try {
     const result = await handler(args, ctx);
