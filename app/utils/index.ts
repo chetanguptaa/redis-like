@@ -150,3 +150,12 @@ export const decodeGeohash = (geoCode: bigint): DecodeCoordinates => {
     gridLongitudeNumber,
   );
 };
+
+export const isBigIntString = (val: string): boolean => {
+  try {
+    BigInt(val);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};

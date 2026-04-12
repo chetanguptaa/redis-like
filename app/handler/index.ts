@@ -11,7 +11,9 @@ import type {
   TZSet,
 } from "../types";
 import {
+  decodeGeohash,
   encodeGeohash,
+  isBigIntString,
   isStrictNumber,
   safeHandler,
   simpleString,
@@ -898,13 +900,36 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     throw new Error("unsupported unsubscribe section");
   },
 
-  ZADD: (args, { zCache }) => {
+  ZADD: (args, { zCache, geoCache }) => {
     if (args.length !== 3) {
       throw new Error("wrong number of arguments for 'zadd'");
     }
     const key = args[0] as string;
-    const score = Number(args[1]);
+    let score = args[1];
     const value = args[2] as string;
+    if ((!zCache && !geoCache) || typeof score !== "string") {
+      throw new Error("unsupported zadd section");
+    }
+    if (isBigIntString(score as string) && geoCache) {
+      let heap = geoCache.get(key);
+      if (!heap) {
+        heap = new MinHeap<TGeoEntry>();
+        geoCache.set(key, heap);
+      }
+      const existingIndex = heap.findByField("member", value);
+      score = BigInt(score);
+      if (existingIndex !== -1) {
+        const { latitude, longitude } = decodeGeohash(score);
+        heap.updateScore(existingIndex, score);
+        (heap.get(existingIndex) as TGeoEntry).lat = latitude;
+        (heap.get(existingIndex) as TGeoEntry).lon = longitude;
+        return 0;
+      } else {
+        const { latitude, longitude } = decodeGeohash(score);
+        heap.insert({ member: value, lat: latitude, lon: longitude, score });
+        return 1;
+      }
+    }
     if (!zCache) throw new Error("unsupported zadd section");
     let heap = zCache.get(key);
     if (!heap) {
@@ -913,10 +938,10 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     }
     const existingIndex = heap.findByField("value", value);
     if (existingIndex !== -1) {
-      heap.updateScore(existingIndex, score);
+      heap.updateScore(existingIndex, Number(score));
       return 0;
     } else {
-      heap.insert({ value, score });
+      heap.insert({ value, score: Number(score) });
       return 1;
     }
   },

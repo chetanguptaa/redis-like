@@ -6,6 +6,7 @@ import type { MinHeap } from "../data-structures/MinHeap";
 export type TRespPrimitive =
   | string
   | number
+  | bigint
   | Stream
   | TSimpleString
   | TRespNull
