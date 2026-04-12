@@ -8,6 +8,7 @@ import type {
   TGeoEntry,
   TRespData,
   TSimpleString,
+  TZSet,
 } from "../types";
 import {
   encodeGeohash,
@@ -934,7 +935,7 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     return rank === -1 ? null : rank;
   },
 
-  ZRANGE: (args, { zCache }) => {
+  ZRANGE: (args, { zCache, geoCache }) => {
     if (args.length < 3) {
       throw new Error("wrong number of arguments for 'zrange'");
     }
@@ -942,8 +943,14 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     let start = Number(args[1]);
     let stop = Number(args[2]);
     const withScores = args[4]?.toString().toUpperCase() === "WITHSCORES";
-    if (!zCache) throw new Error("unsupported zrange section");
-    const heap = zCache.get(key);
+    if (!zCache && !geoCache) throw new Error("unsupported zrange section");
+    let heap: MinHeap<TZSet> | MinHeap<TGeoEntry> | undefined =
+      zCache?.get(key);
+    let getName: (item: any) => string = (item) => item.value;
+    if (!heap && geoCache) {
+      heap = geoCache.get(key);
+      getName = (item) => item.member;
+    }
     if (!heap || heap.size() === 0) return [];
     const sorted = heap.toSortedArray();
     const len = sorted.length;
@@ -953,9 +960,9 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     stop = Math.min(stop, len - 1);
     const slice = sorted.slice(start, stop + 1);
     if (withScores) {
-      return slice.flatMap((item) => [item.value, String(item.score)]);
+      return slice.flatMap((item) => [getName(item), String(item.score)]);
     }
-    return slice.map((item) => item.value);
+    return slice.map((item) => getName(item));
   },
 
   ZCARD: (args, { zCache }) => {
