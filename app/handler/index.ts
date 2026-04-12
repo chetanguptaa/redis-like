@@ -585,16 +585,11 @@ export const rawHandlers: Record<string, TCommandHandler> = {
   },
 
   EXEC: async (args, ctx) => {
-    if (args.length > 0) {
-      throw new Error("wrong number of arguments for 'exec'");
-    }
-    if (!ctx.isMulti) {
-      throw new Error("EXEC without MULTI");
-    }
-    if (ctx.setIsMulti) {
-      ctx.setIsMulti(false);
-    }
-    if (ctx.watchingKeys && ctx.socket && ctx.dirtyKeys) {
+    if (!ctx.isMulti) throw new Error("EXEC without MULTI");
+    if (ctx.setIsMulti) ctx.setIsMulti(false);
+    const queue = ctx.cmdQueue ? [...ctx.cmdQueue] : [];
+    if (ctx.cmdQueue) ctx.cmdQueue.length = 0;
+    if (ctx.watchingKeys && ctx.socket) {
       const watched = ctx.watchingKeys.get(ctx.socket) || [];
       const aborted = watched.some(({ key, valueAtWatch }) => {
         const currentVal =
@@ -605,26 +600,20 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         return currentVal !== valueAtWatch;
       });
       ctx.watchingKeys.delete(ctx.socket);
-      if (aborted) {
-        return {
-          type: "null-array",
-        };
-      }
+      if (ctx.dirtyKeys) ctx.dirtyKeys.clear();
+      if (aborted) return { type: "null-array" };
     }
     const output: TRespData[] = [];
-    if (ctx.cmdQueue) {
-      for (const { handler, args } of ctx.cmdQueue) {
-        try {
-          const res = await handler(args, ctx);
-          output.push(res ?? null);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : "unknown error";
-          output.push(new RedisError("ERR", message));
-        }
+    for (const { handler, args } of queue) {
+      try {
+        const res = await handler(args, ctx);
+        output.push(res ?? null);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "unknown error";
+        output.push(new RedisError("ERR", message));
       }
     }
     if (ctx.dirtyKeys) ctx.dirtyKeys.clear();
-    ctx.watchingKeys?.delete(ctx.socket);
     return output;
   },
 
