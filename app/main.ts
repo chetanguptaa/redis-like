@@ -11,6 +11,8 @@ import type {
 import { executeCommand } from "./cmd-exectutor";
 import RespEncoder from "./encoder/RespEncoder";
 import RespDecoder from "./decoder/RespDecoder";
+import path from "node:path";
+import * as fs from "fs";
 
 const { values } = parseArgs({
   options: {
@@ -166,6 +168,31 @@ class RedisServer {
     this.server = net.createServer(this.handleConnection.bind(this));
     this.dir = dir;
     this.dbFileName = dbFileName;
+    if (dir !== null && dbFileName !== null) {
+      const filePath = path.join(dir, dbFileName);
+      if (fs.existsSync(filePath)) {
+        const dbRaw = fs.readFileSync(filePath);
+        const dbStr = dbRaw.toString("hex");
+        const dbStart = dbStr.indexOf("fe");
+        const dbEnd = dbStr.indexOf("ff");
+        if (dbStart !== -1 && dbEnd !== -1) {
+          let cursor = dbStr.indexOf("fb", dbStart) + 2;
+          while (cursor < dbEnd) {
+            const keyLen = parseInt(dbStr.slice(cursor, cursor + 2), 16);
+            cursor += 2;
+            const keyHex = dbStr.slice(cursor, cursor + keyLen * 2);
+            const key = Buffer.from(keyHex, "hex").toString();
+            cursor += keyLen * 2;
+            const valLen = parseInt(dbStr.slice(cursor, cursor + 2), 16);
+            cursor += 2;
+            const valHex = dbStr.slice(cursor, cursor + valLen * 2);
+            const value = Buffer.from(valHex, "hex").toString();
+            cursor += valLen * 2;
+            this.cache.set(key, value as TRespData);
+          }
+        }
+      }
+    }
     if (replicaOf) {
       this.myMaster = replicaOf;
       connectToMaster(replicaOf, port, this);
