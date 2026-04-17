@@ -23,6 +23,10 @@ const { values } = parseArgs({
     replicaof: { type: "string" },
     dir: { type: "string" },
     dbfilename: { type: "string" },
+    appendonly: { type: "string" },
+    appenddirname: { type: "string" },
+    appendfilename: { type: "string" },
+    appendfsync: { type: "string" },
   },
 });
 
@@ -161,6 +165,10 @@ class RedisServer {
   public mySlaves = new Map<string, net.Socket>();
   public dir: string | null = null;
   public dbFileName: string | null = null;
+  public appenddirname: string = "appendonlydir";
+  public appendfilename: string = "appendonly.aof";
+  public appendfsync: string = "everysec";
+  public appendonly: string = "no";
   public channelsToSubscribersMap = new Map<string, net.Socket[]>();
   public geoCache = new Map<string, MinHeap<TGeoEntry>>();
   public users = new Map<string, string[]>();
@@ -173,13 +181,23 @@ class RedisServer {
   constructor(
     private port: number = 6379,
     replicaOf: string | null = null,
-    dir: string | null = null,
-    dbFileName: string | null = null,
   ) {
+    const dir = values.dir || null;
+    const dbFileName = values.dbfilename || null;
+    const appenddirname = values.appenddirname || "appendonlydir";
+    const appendfilename = values.appendfilename || "appendonly.aof";
+    const appendfsync = values.appendfsync || "everysec";
+    const appendonly = values.appendonly || "no";
+
     this.redisPort = port;
     this.server = net.createServer(this.handleConnection.bind(this));
     this.dir = dir;
     this.dbFileName = dbFileName;
+    this.appenddirname = appenddirname;
+    this.appendfilename = appendfilename;
+    this.appendfsync = appendfsync;
+    this.appendonly = appendonly;
+
     if (dir !== null && dbFileName !== null) {
       const filePath = path.join(dir, dbFileName);
       if (fs.existsSync(filePath)) {
@@ -346,6 +364,10 @@ class RedisServer {
           set replicationOffset(val) {
             self.replicationOffset = val;
           },
+          appenddirname: this.appenddirname,
+          appendfilename: this.appendfilename,
+          appendfsync: this.appendfsync,
+          appendonly: this.appendonly,
         });
       }
     });
@@ -356,9 +378,4 @@ class RedisServer {
   }
 }
 
-new RedisServer(
-  Number(values.port) || 6379,
-  values.replicaof,
-  values.dir,
-  values.dbfilename,
-).start();
+new RedisServer(Number(values.port) || 6379, values.replicaof).start();

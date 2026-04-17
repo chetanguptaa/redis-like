@@ -770,7 +770,10 @@ export const rawHandlers: Record<string, TCommandHandler> = {
     });
   },
 
-  CONFIG: (args, { dir, dbFileName }) => {
+  CONFIG: (
+    args,
+    { dir, dbFileName, appenddirname, appendfilename, appendfsync, appendonly },
+  ) => {
     if (args.length < 2) {
       throw new Error("wrong number of arguments for 'CONFIG'");
     }
@@ -782,6 +785,14 @@ export const rawHandlers: Record<string, TCommandHandler> = {
         return ["dir", dir];
       } else if (configParam === "dbfilename") {
         return ["dbfilename", dbFileName];
+      } else if (configParam === "appendonly") {
+        return ["appendonly", appendonly];
+      } else if (configParam === "appenddirname") {
+        return ["appenddirname", appenddirname];
+      } else if (configParam === "appendfilename") {
+        return ["appendfilename", appendfilename];
+      } else if (configParam === "appendfsync") {
+        return ["appendfsync", appendfsync];
       }
     }
     throw new Error("unsupported CONFIG section");

@@ -81,4 +81,8 @@ export interface ICommandContext {
   setCurrentUser?: (value: string) => void;
   watchingKeys?: Map<net.Socket, { key: string; valueAtWatch: TRespData }[]>;
   dirtyKeys?: Set<string>;
+  appenddirname?: string;
+  appendfilename?: string;
+  appendfsync?: string;
+  appendonly?: string;
 }
