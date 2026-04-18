@@ -8,7 +8,7 @@ A Redis-compatible, single-threaded in-memory datastore built with Bun.js and Ty
 - ⚡ ~400k ops/sec with pipelined requests (P=32)
 - 📉 Sub-3ms P95 latency under concurrent load (300 clients)
 - 🔁 Read replica support with asynchronous replication
-- 💾 RDB-based persistence for snapshot recovery
+- 💾 Dual persistence: RDB + AOF (replay-based recovery)
 - 📡 Pub/Sub and Streams for real-time messaging
 - 🔐 Transactions with optimistic locking
 - 🌍 Supports Redis Serialization Protocol (RESP)
@@ -41,6 +41,7 @@ The system is designed as a **single-threaded event-driven server**, similar to 
 - Optimistic locking (WATCH)
 
 ### Persistence
+- AOF logging + replay-based recovery
 - RDB snapshotting for recovery
 
 ### Replication
@@ -107,6 +108,13 @@ Benchmarked using `redis-benchmark` on a local machine.
 
 ```bash
 bun install
-bun run app/main.ts or bun build app/main.ts --outdir ./dist --minify --target bun && node dist/main.js
 
+# Run directly
+bun run app/main.ts
+
+# OR build + run
+bun build app/main.ts --outdir ./dist --minify --target bun
+node dist/main.js
+
+# Benchmark
 redis-benchmark -p 6379 -t set,get -n 100000 -c 50
